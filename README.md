@@ -14,17 +14,13 @@ nexo-vending
 
 NexoPlatform **no** depende de NexoVending.
 
-## Objetivo V01
+## Objetivo V01 / V02
 
-Bootstrap de producto:
+**V01** — bootstrap de producto (paquete, health, Postgres/Alembic, Docker, CI, Platform dependency).
 
-- paquete `nexo_vending` / distribución `nexo-vending`;
-- FastAPI con `/health` y `/health/ready`;
-- PostgreSQL + Alembic propios;
-- integración con la API pública de Platform (`Tenant`, `UnitOfWork`, `DomainEvent`, `RequestContext`);
-- architecture tests, Testcontainers, clean-install y Docker smoke.
+**V02** — domain foundation (Product, Machine, Inventory ledger, Replenishment aggregate, ports, use cases in-memory).
 
-**Todavía no** incluye dominio de máquinas, productos, inventario ni reposición (eso es V02+).
+**Todavía no** incluye persistencia de dominio, API de negocio, Google OAuth ni apps móviles.
 
 ## Requisitos
 
@@ -77,8 +73,11 @@ pytest tests/e2e -q -m e2e
 | Documento | Contenido |
 | --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Límites Vending ↔ Platform |
+| [docs/architecture/DOMAIN.md](docs/architecture/DOMAIN.md) | Mapa e invariantes de dominio |
+| [docs/architecture/DEPENDENCIES.md](docs/architecture/DEPENDENCIES.md) | Reglas de dependencia |
+| [docs/api/DOMAIN_CONTRACTS.md](docs/api/DOMAIN_CONTRACTS.md) | Contratos de aplicación/dominio |
 | [MIGRATIONS.md](MIGRATIONS.md) | Migraciones separadas |
-| [docs/adr/ADR-001-vending-product-boundary.md](docs/adr/ADR-001-vending-product-boundary.md) | Decisión de producto independiente |
+| [docs/adr/](docs/adr/) | ADRs (producto, monolito, ledger, aggregate, tenant) |
 
 ## Agent Core
 

@@ -71,10 +71,13 @@ def test_wheel_installs_and_imports_in_clean_venv(tmp_path: Path) -> None:
         [
             str(python),
             "-c",
-            "import nexo_platform, nexo_vending; "
+            "import nexo_platform, nexo_vending, nexo_vending.domain; "
             "from nexo_platform import DomainEvent, Tenant, UnitOfWork; "
+            "from nexo_vending.domain.replenishment import Replenishment; "
+            "from nexo_vending.domain.inventory import InventoryLedger; "
             "assert nexo_vending.__version__; assert Tenant; assert UnitOfWork; "
-            "assert DomainEvent(event_type='ok').event_type == 'ok'",
+            "assert DomainEvent(event_type='ok').event_type == 'ok'; "
+            "assert Replenishment is not None; assert InventoryLedger is not None",
         ],
         check=True,
     )

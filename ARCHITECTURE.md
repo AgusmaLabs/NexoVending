@@ -6,59 +6,55 @@
              nexo-platform
                    ▲
                    │
-                   │ pip dependency (public API only)
+                   │ pip dependency (public API only; Application/API)
                    │
              nexo-vending
                    │
           ┌────────┼────────┐
           ▼        ▼        ▼
-       Machine   Product  Inventory   ← planned (not implemented in V01)
+       Machine   Product  Inventory / Replenishment
 ```
 
-Allowed:
-
-```text
-nexo_vending → nexo_platform
-```
-
-Forbidden:
-
-```text
-nexo_platform → nexo_vending
-```
+Allowed: `nexo_vending → nexo_platform`  
+Forbidden: `nexo_platform → nexo_vending`  
+Forbidden in **domain**: any `nexo_platform` import.
 
 ## What belongs where
 
 ### Platform (dependency)
 
 - Tenant / RequestContext
-- UnitOfWork
-- DomainEvent / Outbox mechanism
+- UnitOfWork / Outbox mechanism
 - Identity, authorization, entitlement, billing (as published)
-- Cross-cutting persistence primitives for Platform data
 
 ### Vending (this product)
 
-- Vending domain (machines, products, slots, inventory, replenishment) — **planned**
-- Vending application use cases
-- Vending HTTP API
-- Vending PostgreSQL schema + Alembic migrations
-- Product-specific configuration (`APP_NAME`, `DATABASE_URL`, …)
+- Domain: products, machines/slots, inventory ledger, replenishment aggregate (**implemented**)
+- Application use cases for replenishment (**implemented**)
+- HTTP health API (**implemented**)
+- Vending PostgreSQL schema for domain tables (**planned**)
+- Business HTTP/mobile APIs (**planned**)
 
-## Hexagonal layout (V01)
+## Hexagonal layout
 
 ```text
-api/              FastAPI adapters (thin)
-application/      use cases / orchestration
-domain/           business model (empty in V01; boundary enforced)
-infrastructure/   SQLAlchemy engine/session for Vending DB
+api/                 FastAPI adapters (thin)
+application/         use cases (Start/Add/Complete Replenishment)
+domain/
+  common/            IDs, VOs, errors
+  identity/          Operator contract
+  products/          Product + ports
+  machines/          Machine, MachineSlot, MachineType
+  inventory/         InventoryMovement + InventoryLedger
+  replenishment/     Replenishment aggregate
+infrastructure/      SQLAlchemy engine for health/readiness (domain persistence planned)
 ```
 
-Rules:
+See also:
 
-- `domain` must not import FastAPI, SQLAlchemy, or infrastructure.
-- `api` depends on `application`, not on domain internals of Platform.
-- Vending must not import `nexo_platform.persistence` or other internals.
+- [docs/architecture/DOMAIN.md](docs/architecture/DOMAIN.md)
+- [docs/architecture/DEPENDENCIES.md](docs/architecture/DEPENDENCIES.md)
+- [docs/api/DOMAIN_CONTRACTS.md](docs/api/DOMAIN_CONTRACTS.md)
 
 ## Runtime
 
@@ -66,13 +62,13 @@ Rules:
 Request
   │
   ▼
-Tenant RequestContext (Platform public contract)
+Tenant RequestContext (Platform)     ← Application only
   │
   ▼
-Vending Application
+Vending Application use cases
   │
-  ├─→ Vending PostgreSQL
-  └─→ Platform contracts (events / UoW when needed)
+  ▼
+Domain aggregates / ledger
 ```
 
 ## Implemented vs planned
@@ -81,11 +77,13 @@ Vending Application
 | --- | --- |
 | Package bootstrap + Platform dependency | Implemented |
 | Health / readiness | Implemented |
-| Own Alembic + PostgreSQL | Implemented |
-| Architecture / clean-install / Docker tests | Implemented |
-| Machine / Product / Inventory / Restock | Planned |
+| Domain foundation + replenishment aggregate | Implemented |
+| Inventory ledger model | Implemented |
+| Repository / domain service Protocols | Implemented |
+| PostgreSQL domain persistence | Planned |
+| Business HTTP API | Planned |
 | Agent Core integration | Future |
 
 ## Outbox and UnitOfWork
 
-Vending does **not** duplicate Outbox or UnitOfWork. When business events are introduced, they will use Platform contracts (`DomainEvent`, Outbox) inside Vending transactions.
+Vending does **not** duplicate Outbox or UnitOfWork. Domain events will use Platform contracts when persistence lands.

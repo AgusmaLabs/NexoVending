@@ -52,9 +52,17 @@ DOMAIN_FORBIDDEN = (
     "alembic",
     "uvicorn",
     "psycopg",
+    "nexo_platform",
     "nexo_vending.infrastructure",
     "nexo_vending.api",
 )
+
+APPLICATION_FORBIDDEN = (
+    "nexo_vending.infrastructure",
+)
+
+PRODUCTS_ROOT = DOMAIN_ROOT / "products"
+REPLENISHMENT_ROOT = DOMAIN_ROOT / "replenishment"
 
 
 def python_files(base: Path) -> list[Path]:

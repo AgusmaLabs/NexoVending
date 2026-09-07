@@ -1,6 +1,19 @@
-"""Vending domain package.
+"""Vending domain package — pure business model, no infrastructure."""
 
-V01 deliberately has no domain entities yet. This package exists to establish
-the architectural boundary: domain must not import FastAPI, SQLAlchemy, or
-other infrastructure.
-"""
+from nexo_vending.domain import (
+    common,
+    identity,
+    inventory,
+    machines,
+    products,
+    replenishment,
+)
+
+__all__ = [
+    "common",
+    "identity",
+    "inventory",
+    "machines",
+    "products",
+    "replenishment",
+]
