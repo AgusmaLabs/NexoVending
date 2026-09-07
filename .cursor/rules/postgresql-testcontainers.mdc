@@ -1,0 +1,388 @@
+---
+description: Reglas de persistencia PostgreSQL, Testcontainers, Alembic y Docker para NexoVending.
+globs:
+
+"src/infrastructure/**/*.py"
+"tests/**/*.py"
+"alembic/**/*.py"
+"docker-compose*.yml"
+"Dockerfile*"
+alwaysApply: true
+---
+# Reglas del Proyecto: NexoVending — PostgreSQL y Testcontainers
+
+## 1. PostgreSQL como fuente de verdad
+
+PostgreSQL es la base de datos de referencia de NexoVending.
+
+Los tests de integración que validen persistencia real deben ejecutarse contra PostgreSQL real.
+
+No considerar suficiente:
+
+- SQLite;
+- bases embebidas;
+- mocks de repositories;
+- fake databases.
+
+Los mocks pueden utilizarse para unit tests cuando el objetivo sea aislar comportamiento.
+
+---
+
+## 2. Testcontainers
+
+Los integration tests que dependan de PostgreSQL deben utilizar Testcontainers cuando corresponda.
+
+El entorno debe ser reproducible y no depender de:
+
+- PostgreSQL instalado en el host;
+- estado previo de una base local;
+- datos manuales;
+- configuración específica de la máquina del desarrollador.
+
+La prueba debe levantar su propia infraestructura.
+
+---
+
+## 3. Alembic
+
+Toda modificación del schema debe realizarse mediante migraciones Alembic.
+
+No modificar manualmente el schema como solución permanente.
+
+Cada migración debe:
+
+- tener una revisión válida;
+- mantener correctamente la cadena de migraciones;
+- poder ejecutarse sobre una base limpia;
+- ser compatible con el estado anterior;
+- permitir rollback cuando sea técnicamente razonable;
+- ser probada cuando el cambio tenga impacto crítico.
+
+---
+
+## 4. SQLAlchemy
+
+SQLAlchemy pertenece a Infrastructure.
+
+No debe filtrarse hacia:
+
+
+Domain
+Application
+Ports
+
+Los modelos ORM no deben convertirse accidentalmente en entidades de dominio.
+
+Debe existir separación entre:
+
+Domain Entity
+        ↕
+Mapper
+        ↕
+ORM Model
+
+## 5. Transactions
+
+Los casos de uso que modifican múltiples recursos deben ejecutarse dentro de una unidad transaccional apropiada.
+
+Ejemplo:
+
+Restock
+    ↓
+Inventory update
+    ↓
+Stock movement
+    ↓
+Outbox/event
+
+No debe existir un estado donde una parte de la operación haya sido confirmada y otra no.
+
+Cuando corresponda, utilizar el UnitOfWork proporcionado por NexoPlatform.
+
+No implementar un segundo sistema transaccional paralelo.
+
+## 6. Rollback
+
+Los tests deben comprobar rollback real cuando una operación transaccional falla.
+
+Especialmente cuando exista:
+
+write A
+write B
+write C
+failure
+
+El estado esperado debe ser:
+
+A → rollback
+B → rollback
+C → rollback
+
+No considerar suficiente verificar únicamente que se lanzó una excepción.
+
+Debe verificarse el estado persistido después del rollback.
+
+## 7. Concurrencia
+
+Los escenarios donde dos operaciones pueden modificar simultáneamente el mismo recurso deben probarse contra PostgreSQL real.
+
+Ejemplos:
+
+actualización concurrente de inventario;
+dos reposiciones simultáneas;
+dos operadores sobre la misma máquina;
+actualización concurrente de una visita;
+eventos duplicados;
+idempotencia bajo concurrencia.
+
+Los tests deben demostrar que no se producen lost updates ni estados inconsistentes.
+
+## 8. Optimistic locking
+
+Cuando una entidad requiera optimistic locking:
+
+UPDATE ...
+WHERE id = ...
+AND version = expected_version
+
+La implementación debe detectar correctamente conflictos concurrentes.
+
+El test debe demostrar:
+
+Transaction A → succeeds
+Transaction B → detects conflict
+
+No considerar suficiente probar solamente incrementos de version.
+
+## 9. Integrity constraints
+
+Las invariantes que correspondan al nivel de base de datos deben reforzarse mediante:
+
+UNIQUE;
+FOREIGN KEY;
+CHECK;
+NOT NULL;
+índices;
+constraints apropiadas.
+
+No trasladar todas las garantías a Python si PostgreSQL puede garantizar la integridad.
+
+La base de datos debe ser una segunda línea de defensa.
+
+## 10. Tenant isolation
+
+Las pruebas de persistencia deben verificar aislamiento entre tenants.
+
+Debe existir al menos un escenario equivalente a:
+
+Tenant A → crea datos
+Tenant B → crea datos
+
+Tenant A → sólo puede consultar/modificar A
+Tenant B → sólo puede consultar/modificar B
+
+Cuando corresponda, probar también acceso directo a repositories con un tenant incorrecto.
+
+## 11. Idempotencia
+
+Cuando una operación de negocio deba ser idempotente, probar:
+
+request 1 → success
+request 2 → same idempotency key
+
+y verificar que:
+
+no se duplica el efecto de negocio
+
+Cuando la idempotencia dependa de una constraint de PostgreSQL, probar el comportamiento real.
+
+## 12. Outbox
+
+Si NexoVending utiliza el Outbox de NexoPlatform:
+
+no crear una implementación paralela;
+utilizar el contrato público;
+mantener la escritura del evento dentro de la misma transacción;
+comprobar rollback conjunto;
+comprobar que no exista evento persistido cuando la operación principal hace rollback.
+
+Los tests deben verificar la atomicidad:
+
+Business state + Outbox
+
+como una única unidad transaccional.
+
+## 13. Docker Compose vs Testcontainers
+
+Docker Compose y Testcontainers tienen responsabilidades diferentes.
+
+Docker Compose
+
+Para:
+
+desarrollo local;
+levantar PostgreSQL;
+reproducir un entorno de desarrollo;
+ejecutar la aplicación completa.
+Testcontainers
+
+Para:
+
+integration tests;
+aislamiento entre pruebas;
+PostgreSQL real;
+reproducibilidad;
+validación automática en CI.
+
+No reemplazar Testcontainers por Docker Compose en tests.
+
+No crear una regla Docker independiente salvo que el proyecto posteriormente requiera una política específica de despliegue.
+
+## 14. Datos de prueba
+
+Los integration tests deben crear sus propios datos.
+
+No depender de:
+
+datos manuales;
+bases persistentes compartidas;
+fixtures globales frágiles;
+estado generado por otro test.
+
+Cada test debe ser reproducible.
+
+## 15. Tests y mocks
+
+Usar:
+
+Unit tests
+→ mocks/fakes permitidos
+
+Integration tests
+→ PostgreSQL real
+
+End-to-end tests
+→ infraestructura real cuando corresponda
+
+No mockear PostgreSQL para demostrar:
+
+constraints;
+transactions;
+isolation;
+locking;
+concurrency;
+rollback;
+indexes;
+migrations.
+
+## 16. Definition of Done
+
+Una modificación relacionada con PostgreSQL se considera terminada cuando:
+
+### Schema
+
+El schema requerido está representado correctamente.
+
+Las nuevas tablas tienen PKs adecuadas.
+
+Las relaciones tienen Foreign Keys apropiadas.
+
+Las restricciones UNIQUE/CHECK/NOT NULL necesarias existen.
+
+Los índices necesarios fueron evaluados.
+
+La migración Alembic está creada.
+
+La cadena Alembic sigue siendo válida.
+
+La migración funciona sobre una base limpia.
+
+La migración funciona sobre una base existente compatible.
+
+El rollback fue probado cuando corresponde.
+
+### Persistence
+
+Los ORM models están aislados del dominio.
+
+Los mappers preservan todo el estado relevante.
+
+Los repositories respetan los ports.
+
+No existen queries de infraestructura dentro del dominio.
+
+Los errores de persistencia se traducen correctamente cuando corresponda.
+
+### Transactions
+
+Las operaciones multi-escritura utilizan una única transacción.
+
+Existe test de commit exitoso.
+
+Existe test de rollback.
+
+El rollback verifica el estado persistido real.
+
+No quedan escrituras parciales después de una excepción.
+
+### Concurrency
+
+Los recursos sensibles a concurrencia tienen estrategia definida.
+
+Existe test contra PostgreSQL real para el escenario crítico.
+
+Optimistic locking está probado cuando corresponde.
+
+No existen lost updates.
+
+La idempotencia bajo concurrencia está cubierta cuando aplica.
+
+### Tenant isolation
+
+Existen tests de aislamiento entre tenants.
+
+No existe acceso cross-tenant.
+
+Las queries/repositories reciben correctamente el contexto de tenant.
+
+Las constraints relevantes consideran tenant cuando corresponde.
+
+### Testcontainers
+
+Los tests se ejecutan contra PostgreSQL real.
+
+No dependen de PostgreSQL instalado en el host.
+
+El container es reproducible.
+
+Las migraciones se ejecutan automáticamente.
+
+Los tests limpian correctamente su estado.
+
+La suite funciona en un entorno limpio.
+
+### Calidad
+
+pytest pasa.
+
+ruff check pasa.
+
+Los architecture tests pasan.
+
+No existen dependencias prohibidas.
+
+No se introdujeron bypasses para hacer pasar los tests.
+
+No se utilizan SQLite/fakes para reemplazar una prueba que necesita PostgreSQL real.
+
+### Definition of Done técnica
+
+El comportamiento fue probado desde el punto de vista del contrato.
+
+Las pruebas fallarían si se rompe la garantía que pretenden proteger.
+
+Los tests críticos prueban comportamiento real y no sólo implementación.
+
+La documentación de persistencia fue actualizada si cambió la arquitectura.
+
+El cambio está contenido en el commit correspondiente.

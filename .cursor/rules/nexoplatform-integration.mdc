@@ -1,0 +1,208 @@
+---
+description: Reglas para consumir NexoPlatform como paquete público desde NexoVending.
+globs:
+
+"src/**/*.py"
+"tests/**/*.py"
+"pyproject.toml"
+alwaysApply: true
+---
+NexoVending ↔ NexoPlatform Integration Rules
+## 1. Dependency Direction
+
+La dependencia válida es:
+
+NexoVending
+↓
+NexoPlatform
+
+La dependencia inversa está prohibida.
+
+NexoPlatform NO debe conocer NexoVending.
+
+## 2. NexoPlatform es una dependencia externa
+
+NexoVending debe tratar NexoPlatform como un paquete.
+
+No asumir acceso a:
+
+archivos internos;
+módulos privados;
+sesiones internas;
+repositories internos;
+clases concretas;
+detalles de implementación.
+## 3. Public API Only
+
+NexoVending debe consumir únicamente APIs y contratos públicos de NexoPlatform.
+
+Evitar imports desde módulos internos o privados.
+
+Preferir:
+
+from nexoplatform.<public_module> import ...
+
+Evitar dependencias sobre:
+
+from nexoplatform.<internal_module> import ...
+
+si ese módulo no forma parte de la API pública.
+
+## 4. No modificar Platform desde Vending
+
+NUNCA modificar código de NexoPlatform desde el workspace de NexoVending para resolver una necesidad de Vending.
+
+Si falta una capacidad:
+
+identificar la necesidad;
+determinar si realmente pertenece a Platform;
+proponer cambio en NexoPlatform;
+implementar y validar ese cambio en su workspace;
+publicar/nueva versión;
+actualizar la dependencia de Vending.
+## 5. No duplicar capacidades
+
+Antes de implementar infraestructura en Vending:
+
+buscar primero en NexoPlatform.
+
+Especialmente:
+
+UnitOfWork;
+transaction management;
+Tenant;
+repositories base;
+Outbox;
+event infrastructure;
+retry policy;
+common errors;
+persistence abstractions.
+## 6. Vending puede extender, no modificar internals
+
+Vending puede construir sobre Platform mediante:
+
+sus ports;
+sus interfaces;
+sus eventos;
+sus extension points;
+sus APIs públicas.
+
+No monkey-patching.
+
+No acceder a atributos privados.
+
+No heredar de clases internas sólo para evitar una API pública.
+
+## 7. Versioning
+
+NexoVending debe declarar explícitamente la versión compatible de NexoPlatform.
+
+Evitar depender de cambios no publicados.
+
+Cuando se requiera una nueva API:
+
+→ actualizar primero NexoPlatform.
+
+## 8. Breaking Changes
+
+Si NexoPlatform cambia una API pública:
+
+buscar:
+
+consumidores;
+tests;
+adapters;
+documentación.
+
+No asumir que el cambio sólo afecta Platform.
+
+## 9. Tenant
+
+Si NexoPlatform proporciona el mecanismo de tenant isolation:
+
+Vending debe utilizarlo.
+
+No crear un segundo sistema de tenancy.
+
+Vending puede agregar reglas de negocio tenant-specific, pero no duplicar la infraestructura transversal.
+
+## 10. Transactions
+
+Si NexoPlatform proporciona UnitOfWork:
+
+Vending debe utilizarla.
+
+No crear:
+
+VendingUnitOfWork
+
+si el comportamiento requerido ya está cubierto por Platform.
+
+## 11. Outbox
+
+Si Vending necesita publicar eventos:
+
+utilizar el mecanismo Outbox proporcionado por Platform cuando sea apropiado.
+
+Los eventos deben representar hechos de negocio de Vending.
+
+Ejemplos:
+
+VendingMachineRestocked
+InventoryAdjusted
+RestockingVisitCompleted
+
+Platform proporciona el mecanismo.
+
+Vending define el significado de negocio.
+
+## 12. Errors
+
+Utilizar las excepciones públicas de Platform cuando correspondan.
+
+Las excepciones específicas de Vending deben permanecer en Vending.
+
+No envolver innecesariamente errores sólo para ocultar su origen.
+
+## 13. Integration Tests
+
+Debe existir al menos una prueba que demuestre que Vending puede:
+
+importar NexoPlatform;
+inicializar sus componentes;
+ejecutar una operación real;
+utilizar la infraestructura proporcionada por Platform.
+
+Cuando corresponda, probar contra PostgreSQL real.
+
+## 14. Architecture Test
+
+Debe existir una regla automatizada que garantice:
+
+NexoPlatform → NexoVending
+
+NO está permitido.
+
+NexoVending → NexoPlatform
+
+SÍ está permitido.
+
+## 15. Regla fundamental
+
+Si una implementación de Vending requiere conocer cómo funciona internamente NexoPlatform:
+
+→ probablemente existe un problema de contrato.
+
+Antes de acceder a internals:
+
+detenerse y evaluar si debe existir una API/port público.
+
+## 16. Definition of Done 
+- [ ] Sólo se utilizan APIs públicas de NexoPlatform.
+- [ ] No existen imports de internals.
+- [ ] La versión de NexoPlatform está declarada explícitamente.
+- [ ] La feature funciona contra esa versión.
+- [ ] Los tests de integración pasan.
+- [ ] No se duplicó una capacidad existente de Platform.
+- [ ] No se modificó Platform desde este workspace.
+- [ ] Si Platform requiere una nueva capability, ésta fue separada en otro cambio. - [ ] Los architecture tests protegen la dirección Vending → Platform.

@@ -1,0 +1,350 @@
+---
+description: Disciplina de commits para desarrollo incremental de NexoVending.
+globs:
+
+"**/*"
+alwaysApply: true
+---
+# Reglas del Proyecto: NexoVending — Commits
+
+## 1. Principio
+
+Cada commit debe representar una capacidad técnica o de negocio coherente.
+
+No utilizar commits como contenedores de cambios acumulativos no relacionados.
+
+Un commit debe poder responder claramente:
+
+> ¿Qué capacidad se agregó, corrigió o refactorizó?
+
+---
+
+## 2. Un objetivo por commit
+
+Preferir:
+
+
+Commit A → dominio de inventario
+Commit B → persistencia de inventario
+Commit C → reposición
+Commit D → API de reposición
+
+sobre:
+
+Commit X → inventario + API + Docker + refactor + documentación + Platform
+
+Los cambios relacionados pueden permanecer en el mismo commit cuando forman parte de una única capacidad.
+
+## 3. Tests forman parte del cambio
+
+No implementar primero la funcionalidad y dejar los tests para otro commit.
+
+El commit debe incluir:
+
+implementation
++
+tests
++
+necessary documentation
+
+cuando estos elementos forman parte de la capacidad implementada.
+
+## 4. Cambios de NexoPlatform
+
+Desde NexoVending:
+
+NO modificar NexoPlatform.
+
+Si durante una implementación aparece una necesidad de Platform:
+
+NexoVending
+    ↓
+detecta capability missing
+    ↓
+documenta necesidad
+    ↓
+cambio separado en NexoPlatform
+    ↓
+release/version
+    ↓
+actualiza dependency
+    ↓
+continúa Vending
+
+No mezclar:
+
+Vending feature
++
+Platform feature
+
+en un mismo commit de Vending.
+
+## 5. No hacer refactors oportunistas
+
+Mientras se implementa una feature:
+
+No aprovechar para cambiar sin necesidad:
+
+nombres;
+estructura completa de carpetas;
+framework;
+ORM;
+sistema de configuración;
+arquitectura;
+dependencias;
+convenciones existentes.
+
+Si el refactor es necesario, convertirlo en un cambio explícito y justificable.
+
+## 6. Conventional Commits
+
+Usar Conventional Commits.
+
+Ejemplos:
+
+feat(vending): add restock workflow
+feat(inventory): register stock movements
+fix(inventory): prevent duplicate stock movement
+test(restock): add concurrent execution coverage
+refactor(domain): extract machine identity value object
+docs(architecture): document restock lifecycle
+chore(deps): upgrade nexoplatform
+
+El scope debe ser específico.
+
+## 7. Commits de infraestructura
+
+Los cambios de:
+
+PostgreSQL;
+Alembic;
+Testcontainers;
+configuración de testing;
+
+pueden formar parte del commit funcional cuando son necesarios para completar esa capacidad.
+
+No crear commits artificialmente separados sólo para:
+
+add migration
+
+si la migración forma parte inseparable de una feature.
+
+## 8. Commits de documentación
+
+La documentación necesaria para que una feature quede completa debe acompañar al cambio.
+
+Crear un commit separado sólo cuando:
+
+la documentación es independiente;
+se actualiza documentación global;
+se modifica un ADR sin cambio de código;
+se realiza una reorganización documental.
+
+## 9. Antes de crear el commit
+
+Revisar:
+
+git status
+git diff
+git diff --cached
+
+Confirmar:
+
+archivos modificados esperados;
+ausencia de secretos;
+ausencia de archivos temporales;
+ausencia de cambios de otro trabajo;
+ausencia de modificaciones accidentales de Platform.
+## 10. Validación
+
+Antes de considerar terminado un commit relevante:
+
+pytest
+ruff check
+architecture tests
+integration tests
+
+Ejecutar además:
+
+PostgreSQL/Testcontainers
+
+cuando el cambio afecte persistencia o transacciones.
+
+## 11. Tests proporcionales al riesgo
+
+No todos los cambios necesitan el mismo nivel de pruebas.
+
+Domain change
+
+Debe tener:
+
+unit tests
+Application change
+
+Debe tener:
+
+unit tests
++
+application tests
+Persistence change
+
+Debe tener:
+
+unit tests
++
+PostgreSQL integration tests
+Concurrency/transaction change
+
+Debe tener:
+
+PostgreSQL real
++
+concurrency/rollback tests
+API change
+
+Debe tener:
+
+application tests
++
+API/integration tests
+## 12. Criterios de aceptación
+
+Antes de implementar una feature, definir criterios de aceptación verificables.
+
+Ejemplo:
+
+Given ...
+When ...
+Then ...
+
+Los criterios deben convertirse en tests cuando sea razonable.
+
+No considerar terminado un commit sólo porque:
+
+"el código funciona"
+
+Debe existir evidencia verificable.
+
+## 13. Cambios incompatibles
+
+Si una modificación rompe un contrato público:
+
+identificar consumidores;
+evaluar impacto;
+actualizar documentación;
+actualizar tests;
+definir estrategia de migración;
+realizar el cambio explícitamente.
+
+No introducir breaking changes silenciosos.
+
+## 14. Dependencias
+
+Cuando se modifica una dependencia:
+
+justificar el cambio;
+actualizar lockfile cuando corresponda;
+ejecutar tests;
+comprobar compatibilidad;
+documentar breaking changes relevantes.
+
+La actualización de NexoPlatform debe ser explícita.
+
+## 15. Commit como unidad reproducible
+
+El commit debe dejar el proyecto en un estado coherente.
+
+No aceptar:
+
+commit A → código roto
+commit B → tests que arreglan A
+
+salvo que exista una razón técnica explícita para mantener esa separación.
+
+Preferir commits individualmente funcionales.
+
+## 16. Definition of Done
+
+Un commit se considera terminado cuando:
+
+### Scope
+
+Tiene un objetivo único y claro.
+
+Todos los cambios pertenecen al objetivo.
+
+No contiene refactors oportunistas.
+
+No contiene cambios de otro dominio.
+
+No modifica NexoPlatform desde este workspace.
+
+### Implementación
+
+La funcionalidad está implementada.
+
+La arquitectura existente se mantiene.
+
+Los contratos públicos son coherentes.
+
+Las invariantes relevantes están protegidas.
+
+Los errores relevantes están gestionados.
+
+### Testing
+
+Los tests nuevos cubren el comportamiento agregado.
+
+Los tests existentes siguen pasando.
+
+Los integration tests existen cuando son necesarios.
+
+PostgreSQL/Testcontainers se utiliza cuando el cambio lo requiere.
+
+Concurrencia/rollback/idempotencia están probados cuando aplican.
+
+Los architecture tests pasan.
+
+### Calidad
+
+pytest pasa.
+
+ruff check pasa.
+
+No hay warnings críticos introducidos.
+
+No hay imports prohibidos.
+
+No hay dependencias circulares.
+
+No hay secretos ni archivos temporales en el commit.
+
+### NexoPlatform
+
+No se modificó Platform desde NexoVending.
+
+Sólo se utilizan APIs públicas de Platform.
+
+La versión de Platform está correctamente declarada.
+
+Si se necesitó una nueva capacidad de Platform, ésta fue implementada en un cambio independiente.
+
+### Documentación
+
+La documentación necesaria está actualizada.
+
+Los ADRs afectados fueron revisados.
+
+Los contratos nuevos están documentados.
+
+La documentación no afirma funcionalidades inexistentes.
+
+### Git
+
+git diff fue revisado.
+
+git status está limpio después del commit.
+
+El mensaje sigue Conventional Commits.
+
+El commit es reproducible y deja el proyecto en estado coherente.

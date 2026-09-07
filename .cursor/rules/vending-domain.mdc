@@ -1,0 +1,517 @@
+---
+description: Reglas arquitectónicas para el dominio de NexoVending.
+globs:
+
+"src/**/*.py"
+"tests/**/*.py"
+"alembic/**/*.py"
+alwaysApply: true
+---
+Reglas del Proyecto: NexoVending — Dominio y Arquitectura
+## 1. Propósito
+
+NexoVending es la aplicación de negocio para operar un negocio de vending.
+
+Debe contener las reglas, procesos e invariantes propios del negocio de vending y consumir capacidades transversales de NexoPlatform.
+
+NexoVending NO debe convertirse en una extensión de NexoPlatform.
+
+Responsabilidades propias de NexoVending incluyen, entre otras:
+
+máquinas vending;
+tipos de máquina;
+productos;
+códigos de barras;
+slots;
+inventario;
+stock;
+movimientos de inventario;
+reposición;
+visitas de reposición;
+operadores/reponedores;
+escaneo de productos;
+incidencias operacionales;
+planificación operacional;
+métricas propias del negocio;
+reglas comerciales específicas de vending.
+
+Las responsabilidades transversales pertenecen a NexoPlatform.
+
+## 2. Dirección de dependencias
+
+La dirección permitida es:
+
+NexoVending
+    ↓
+NexoPlatform
+
+Nunca:
+
+NexoPlatform
+    ↓
+NexoVending
+
+NexoVending puede depender de contratos públicos de NexoPlatform.
+
+NexoVending no puede modificar conceptualmente la arquitectura de NexoPlatform para resolver una necesidad específica del negocio.
+
+Si falta una capacidad transversal en NexoPlatform:
+
+identificar la capacidad faltante;
+detener la implementación local si implica duplicación;
+proponer un cambio independiente en NexoPlatform;
+implementar ese cambio en el workspace de NexoPlatform;
+publicar/versionar la nueva capacidad;
+actualizar la dependencia de NexoVending;
+continuar la implementación de Vending.
+## 3. Hexagonal Architecture
+
+Mantener separación explícita entre:
+
+Domain
+Application
+Ports
+Adapters
+Infrastructure
+
+La dirección conceptual debe ser:
+
+Adapters
+    ↓
+Application
+    ↓
+Domain
+
+Application
+    ↓
+Ports
+
+Infrastructure
+    ↓
+Ports
+
+El dominio no debe depender de:
+
+SQLAlchemy;
+PostgreSQL;
+FastAPI;
+HTTP;
+Docker;
+Redis;
+SDKs externos;
+proveedores de pago;
+WhatsApp;
+OpenAI;
+Gemini;
+librerías de infraestructura.
+## 4. Dominio de Vending
+
+Las entidades y value objects deben representar conceptos reales del negocio.
+
+Ejemplos:
+
+VendingMachine
+Product
+ProductBarcode
+Slot
+Inventory
+InventoryItem
+StockMovement
+RestockVisit
+RestockOperation
+Operator
+Incident
+
+No introducir entidades técnicas sólo porque facilitan la persistencia.
+
+El modelo debe expresar invariantes del negocio de manera explícita.
+
+## 5. Invariantes de negocio
+
+Las reglas importantes deben vivir en el dominio o en casos de uso claramente identificables.
+
+Ejemplos:
+
+una máquina debe tener una identidad única;
+un slot pertenece a una máquina;
+un producto debe poder identificarse mediante un código de barras válido;
+una reposición debe estar asociada a una máquina;
+un movimiento de stock debe ser trazable;
+una operación de reposición no debe generar movimientos duplicados;
+el stock no debe quedar inconsistente;
+una máquina debe tener un estado operacional válido;
+una visita de reposición debe tener un ciclo de vida explícito.
+
+No esconder reglas críticas exclusivamente en:
+
+controllers;
+repositories;
+SQL;
+serializers;
+handlers HTTP.
+## 6. Identificación de máquina, producto y slot
+
+No confundir:
+
+Machine identity
+Product identity
+Barcode identity
+Slot identity
+Inventory identity
+
+El código de barras identifica un producto o una presentación comercial, no necesariamente una máquina.
+
+La máquina debe tener una identidad independiente.
+
+El slot pertenece a una máquina.
+
+El inventario representa el estado operacional y debe poder reconstruirse mediante movimientos cuando el modelo lo requiera.
+
+## 7. Inventario
+
+El inventario debe ser trazable.
+
+Cuando corresponda, preferir:
+
+StockMovement
+
+como fuente de trazabilidad frente a modificaciones opacas del saldo.
+
+Un cambio de stock debe poder explicar:
+
+qué ocurrió
+cuándo ocurrió
+sobre qué máquina
+sobre qué producto
+qué cantidad cambió
+por qué cambió
+quién lo ejecutó
+qué operación lo originó
+
+Los casos de uso que modifiquen inventario deben considerar concurrencia e idempotencia.
+
+## 8. Reposición
+
+La reposición es un proceso de negocio, no simplemente un CRUD.
+
+Debe poder modelarse como una operación explícita:
+
+identificar máquina
+→ iniciar visita
+→ identificar producto
+→ validar producto
+→ determinar slot
+→ registrar reposición
+→ actualizar inventario
+→ registrar movimiento
+→ cerrar operación
+
+No implementar todo el flujo dentro de un controller.
+
+La aplicación debe orquestar el caso de uso y el dominio debe proteger las invariantes.
+
+## 9. Idempotencia
+
+Operaciones que puedan ser reintentadas deben tener una estrategia de idempotencia.
+
+Especialmente:
+
+reposiciones;
+movimientos de stock;
+recepción de eventos;
+integración con sistemas externos;
+operaciones iniciadas desde dispositivos móviles;
+comandos que puedan repetirse por problemas de red.
+
+Un retry no debe producir una segunda operación de negocio.
+
+## 10. Concurrencia
+
+No asumir que existe un único operador modificando una máquina.
+
+Casos relevantes:
+
+dos reponedores sobre la misma máquina;
+dos dispositivos registrando stock;
+sincronización offline/online;
+actualización simultánea del inventario;
+eventos duplicados;
+reintentos concurrentes.
+
+Cuando una operación pueda sufrir lost updates, usar los mecanismos apropiados de NexoPlatform o de persistencia.
+
+No implementar mecanismos de concurrencia ad-hoc si NexoPlatform ya proporciona el mecanismo transversal.
+
+## 11. Tenant isolation
+
+Toda información de negocio que pertenezca a un tenant debe respetar aislamiento por tenant.
+
+No permitir:
+
+Tenant A → datos de Tenant B
+
+El contexto de tenant debe ser explícito.
+
+No confiar exclusivamente en filtros agregados manualmente en cada controller.
+
+Cuando NexoPlatform proporcione mecanismos transversales de tenant isolation, deben utilizarse.
+
+## 12. Application Layer
+
+Los casos de uso deben representar acciones de negocio.
+
+Ejemplos:
+
+IdentifyMachine
+ScanProduct
+StartRestockVisit
+RegisterRestock
+RegisterStockMovement
+CompleteRestockVisit
+ReportIncident
+
+Los casos de uso:
+
+reciben comandos/inputs;
+validan precondiciones;
+cargan agregados;
+invocan comportamiento de dominio;
+coordinan repositorios;
+coordinan transacciones mediante ports;
+publican eventos cuando corresponda.
+
+No deben contener detalles de infraestructura.
+
+## 13. Ports
+
+Cuando un caso de uso necesite infraestructura, debe depender de un port.
+
+Ejemplos:
+
+MachineRepository
+ProductRepository
+InventoryRepository
+RestockRepository
+UnitOfWork
+EventPublisher
+Clock
+IdempotencyStore
+
+Los adapters implementan dichos contratos.
+
+## 14. API y adapters de entrada
+
+FastAPI, HTTP, WebSockets, mobile APIs, WhatsApp u otros canales son adapters.
+
+Los controllers deben ser delgados.
+
+No colocar lógica de negocio significativa en:
+
+router
+controller
+serializer
+request handler
+
+El flujo debe ser:
+
+External Input
+      ↓
+Adapter
+      ↓
+Application Use Case
+      ↓
+Domain
+      ↓
+Ports
+      ↓
+Adapters
+## 15. Integración con Agent Core
+
+Agent Core es una capacidad externa y transversal.
+
+NexoVending puede proporcionar contexto de negocio de vending mediante contratos definidos para esa integración.
+
+No importar internals de Agent Core.
+
+No hacer que el dominio de Vending dependa directamente de:
+
+prompts;
+modelos LLM;
+OpenAI SDK;
+Gemini SDK;
+memoria del agente;
+herramientas internas del agente.
+
+La integración debe ocurrir mediante ports/contracts/adapters.
+
+## 16. Infraestructura externa
+
+Servicios externos deben estar detrás de adapters.
+
+Ejemplos:
+
+BarcodeScanner
+NotificationProvider
+ExternalInventoryProvider
+AgentRuntime
+MessagingProvider
+
+No introducir SDKs de proveedores directamente en el dominio.
+
+## 17. No duplicar NexoPlatform
+
+Antes de implementar una capacidad transversal, comprobar si ya existe en NexoPlatform.
+
+No duplicar localmente:
+
+UnitOfWork;
+transaction management;
+retry policy;
+optimistic locking genérico;
+Outbox;
+tenant context;
+event infrastructure;
+infraestructura PostgreSQL transversal;
+utilidades técnicas ya expuestas por Platform.
+
+Si una capacidad falta, evaluar primero si corresponde agregarla a NexoPlatform.
+
+## 18. Regla de modificación de Platform
+
+Desde el workspace de NexoVending:
+
+NO modificar NexoPlatform.
+
+Si una solución requiere cambiar Platform:
+
+STOP
+→ documentar necesidad
+→ implementar cambio en NexoPlatform
+→ validar Platform
+→ versionar Platform
+→ actualizar dependencia
+→ continuar Vending
+
+No crear soluciones temporales que terminen convirtiéndose en duplicación permanente.
+
+## 19. Definition of Done
+
+Una implementación de NexoVending se considera terminada únicamente cuando:
+
+### Arquitectura
+
+La solución respeta la arquitectura hexagonal.
+
+El dominio no depende de infraestructura.
+
+La dirección NexoVending → NexoPlatform se mantiene.
+
+No existe dependencia inversa.
+
+No se importan internals de NexoPlatform.
+
+No se modificó NexoPlatform desde este workspace.
+
+No se duplicaron capacidades existentes de NexoPlatform.
+
+### Dominio
+
+Las entidades y value objects representan conceptos reales de vending.
+
+Las invariantes relevantes están protegidas.
+
+Los casos de uso representan acciones de negocio explícitas.
+
+La lógica crítica no está escondida en controllers o repositories.
+
+Los cambios de inventario son trazables.
+
+Los flujos de reposición tienen estados y transiciones explícitas cuando corresponde.
+
+### Persistencia
+
+Los repositories respetan los ports definidos.
+
+Las transacciones están correctamente delimitadas.
+
+Las operaciones multi-entidad no dejan estados parciales.
+
+Los casos con concurrencia relevante tienen protección adecuada.
+
+Las operaciones reintentables tienen estrategia de idempotencia.
+
+### Tenant isolation
+
+Los datos están correctamente aislados por tenant.
+
+Los casos de uso no permiten acceso cross-tenant.
+
+Existen pruebas explícitas de aislamiento cuando el caso lo requiere.
+
+### Testing
+
+Existen unit tests para reglas de dominio.
+
+Existen tests de aplicación para los casos de uso modificados.
+
+Existen integration tests cuando participa infraestructura real.
+
+Los escenarios de error relevantes están cubiertos.
+
+Los escenarios de concurrencia relevantes están cubiertos.
+
+Los escenarios de idempotencia relevantes están cubiertos.
+
+Los tests de tenant isolation relevantes están cubiertos.
+
+No se agregaron mocks donde una integración real sea necesaria para demostrar corrección.
+
+### Calidad
+
+pytest pasa.
+
+ruff check pasa.
+
+Las architecture tests pasan.
+
+No existen imports prohibidos.
+
+No existen dependencias circulares.
+
+No existen TODOs críticos introducidos para ocultar trabajo pendiente.
+
+El diff no contiene cambios no relacionados.
+
+### Documentación
+
+La documentación de arquitectura sigue siendo correcta.
+
+Los ADRs necesarios fueron actualizados o creados.
+
+Los contratos públicos relevantes están documentados.
+
+Se distingue claramente lo implementado de lo planificado.
+
+Si cambió un flujo de negocio importante, existe documentación del flujo.
+
+### Integración
+
+La versión de NexoPlatform utilizada está explícitamente declarada.
+
+La integración utiliza exclusivamente APIs públicas.
+
+Los tests de integración con Platform pasan.
+
+No existen dependencias accidentales sobre detalles internos de Platform.
+
+### Git
+
+El commit contiene una única capacidad coherente.
+
+Los tests forman parte del mismo cambio.
+
+No existen refactors no relacionados.
+
+El mensaje de commit sigue Conventional Commits.
+
+El estado final del repositorio es reproducible.

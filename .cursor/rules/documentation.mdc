@@ -1,0 +1,145 @@
+---
+description: Reglas de documentación técnica para NexoVending.
+globs:
+
+"**/*.md"
+"docs/**/*"
+"ADR/**/*"
+alwaysApply: true
+---
+NexoVending — Documentation Rules
+## 1. Architecture
+
+ARCHITECTURE.md debe explicar:
+
+Vending domain;
+application;
+ports;
+adapters;
+NexoPlatform dependency;
+Agent Core integration;
+persistence;
+transactions;
+events;
+external channels.
+## 2. Boundary
+
+La documentación debe dejar explícito:
+
+NexoVending
+↓
+NexoPlatform
+
+NexoPlatform
+X
+NexoVending
+
+##3. Platform Integration
+
+Documentar qué capacidades son proporcionadas por Platform y cuáles pertenecen a Vending.
+
+Ejemplo:
+
+Platform:
+
+UnitOfWork;
+Tenant;
+Outbox;
+transaction;
+persistence infrastructure.
+
+Vending:
+
+inventory;
+replenishment;
+machine;
+product;
+restocking workflows.
+## 4. ADR
+
+Utilizar ADR para decisiones como:
+
+inventory consistency;
+machine identification;
+replenishment workflow;
+Agent integration;
+Platform dependency;
+event model.
+
+Formato:
+
+Context
+Decision
+Consequences
+Alternatives considered
+
+## 5. Public Contracts
+
+Documentar contratos que sean consumidos externamente.
+
+No documentar internals como si fueran APIs públicas.
+
+## 6. Implemented vs Planned
+
+Distinguir:
+
+Implemented
+Planned
+Future
+
+No documentar funcionalidades futuras como implementadas.
+
+## 7. API Documentation
+
+La documentación de API debe reflejar el contrato real.
+
+Si cambia:
+
+request;
+response;
+error;
+endpoint;
+authentication;
+event;
+
+actualizar documentación correspondiente.
+
+## 8. Commit Documentation
+
+Cuando una capacidad tenga impacto arquitectónico, documentar:
+
+purpose;
+implementation;
+tests;
+acceptance criteria;
+architectural impact.
+## 9. Source of Truth
+
+Evitar documentación contradictoria.
+
+Si cambia una decisión:
+
+→ actualizar la documentación vigente y ADR correspondiente.
+
+## 10. No sobre-documentar
+
+No documentar obviedades del código.
+
+La documentación debe explicar:
+
+decisiones;
+límites;
+contratos;
+comportamiento importante;
+razones arquitectónicas.
+
+## 11. Definition of Done
+- [ ] La documentación describe únicamente el comportamiento actual como implementado.
+- [ ] Las funcionalidades futuras están marcadas explícitamente.
+- [ ] La arquitectura documentada coincide con el código.
+- [ ] La dirección Vending → NexoPlatform está documentada.
+- [ ] No se documentan internals de Platform como contratos de Vending.
+- [ ] Los ADRs relevantes están actualizados.
+- [ ] Los nuevos flujos de negocio tienen documentación suficiente.
+- [ ] No existen contradicciones entre README, ARCHITECTURE.md y ADRs.
+- [ ] Los diagramas, si existen, representan la arquitectura actual.

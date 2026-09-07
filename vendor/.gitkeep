@@ -1,0 +1,2 @@
+# Vendored wheels for offline/Docker installs (nexo-platform==1.0.0).
+# Populate with: python scripts/vendor_platform.py
