@@ -1,11 +1,11 @@
-"""Shared domain primitives: errors, identifiers, value objects."""
-
 from nexo_vending.domain.common.errors import DomainError
 from nexo_vending.domain.common.ids import (
     InventoryMovementId,
     MachineId,
+    OperatorId,
     ProductId,
     ReplenishmentId,
+    TenantId,
     UserId,
 )
 from nexo_vending.domain.common.value_objects import Barcode, GeoLocation, Quantity
@@ -16,8 +16,10 @@ __all__ = [
     "GeoLocation",
     "InventoryMovementId",
     "MachineId",
+    "OperatorId",
     "ProductId",
     "Quantity",
     "ReplenishmentId",
+    "TenantId",
     "UserId",
 ]

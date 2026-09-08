@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = ROOT / "src" / "nexo_vending"
 DOMAIN_ROOT = SRC_ROOT / "domain"
+IDENTITY_ROOT = DOMAIN_ROOT / "identity"
 
 FORBIDDEN_COPIED_PATHS = (
     ROOT / "nexo_platform",
@@ -27,6 +28,7 @@ ALLOWED_PLATFORM_PREFIXES = (
     "nexo_platform.entitlement",
     "nexo_platform.events",
     "nexo_platform.identity",
+    "nexo_platform.identity.authentication",
     "nexo_platform.outbox",
     "nexo_platform.shared",
     "nexo_platform.tenant",
@@ -46,19 +48,32 @@ FORBIDDEN_PLATFORM_PREFIXES = (
     "nexo_platform.tenant.domain",
 )
 
-DOMAIN_FORBIDDEN = (
+DOMAIN_FORBIDDEN_BASE = (
     "fastapi",
     "sqlalchemy",
     "alembic",
     "uvicorn",
     "psycopg",
-    "nexo_platform",
     "nexo_vending.infrastructure",
     "nexo_vending.api",
+    "google",
+    "google.oauth2",
+    "google.auth",
+    "authlib",
+    "jose",
+    "python_jose",
+)
+
+# Only domain.identity may bind Platform authentication contracts (Principal).
+DOMAIN_ALLOWED_PLATFORM_IN_IDENTITY = (
+    "nexo_platform.identity.authentication",
 )
 
 APPLICATION_FORBIDDEN = (
     "nexo_vending.infrastructure",
+    "google.oauth2",
+    "google.auth",
+    "authlib",
 )
 
 PRODUCTS_ROOT = DOMAIN_ROOT / "products"
@@ -95,7 +110,21 @@ def is_allowed_platform_import(module: str) -> bool:
         return True
     if starts_with_any(module, FORBIDDEN_PLATFORM_PREFIXES):
         return False
-    # Allow top-level package and explicit capability roots only.
     if module == "nexo_platform":
         return True
     return starts_with_any(module, ALLOWED_PLATFORM_PREFIXES)
+
+
+def is_forbidden_domain_import(path: Path, module: str) -> bool:
+    if starts_with_any(module, DOMAIN_FORBIDDEN_BASE):
+        return True
+    if not module.startswith("nexo_platform"):
+        return False
+    try:
+        path.relative_to(IDENTITY_ROOT)
+        in_identity = True
+    except ValueError:
+        in_identity = False
+    if in_identity and starts_with_any(module, DOMAIN_ALLOWED_PLATFORM_IN_IDENTITY):
+        return False
+    return True

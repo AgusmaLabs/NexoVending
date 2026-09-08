@@ -52,9 +52,8 @@ infrastructure/      SQLAlchemy engine for health/readiness (domain persistence 
 
 See also:
 
-- [docs/architecture/DOMAIN.md](docs/architecture/DOMAIN.md)
-- [docs/architecture/DEPENDENCIES.md](docs/architecture/DEPENDENCIES.md)
-- [docs/api/DOMAIN_CONTRACTS.md](docs/api/DOMAIN_CONTRACTS.md)
+- [docs/architecture/IDENTITY_BOUNDARY.md](docs/architecture/IDENTITY_BOUNDARY.md)
+- [docs/security/OPERATOR_ACCESS_MODEL.md](docs/security/OPERATOR_ACCESS_MODEL.md)
 
 ## Runtime
 
@@ -75,10 +74,11 @@ Domain aggregates / ledger
 
 | Capability | Status |
 | --- | --- |
-| Package bootstrap + Platform dependency | Implemented |
+| Package bootstrap + Platform dependency | Implemented (`nexo-platform==1.2.0`) |
 | Health / readiness | Implemented |
 | Domain foundation + replenishment aggregate | Implemented |
 | Inventory ledger model | Implemented |
+| Tenant-scoped Operator identity + authorization | Implemented |
 | Repository / domain service Protocols | Implemented |
 | PostgreSQL domain persistence | Planned |
 | Business HTTP API | Planned |

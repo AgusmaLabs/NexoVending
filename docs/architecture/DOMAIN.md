@@ -37,7 +37,7 @@ Status: **Implemented** (in-memory domain foundation). Persistence adapters are 
 | Module | Responsibility |
 | --- | --- |
 | `domain.common` | IDs, value objects, domain errors |
-| `domain.identity` | Operator reference contract (not full auth) |
+| `domain.identity` | Operator lifecycle, validity, Vending authorization policies |
 | `domain.products` | Product catalog entity + lookup/repository ports |
 | `domain.machines` | Machine, MachineSlot, MachineType |
 | `domain.inventory` | InventoryMovement + InventoryLedger |

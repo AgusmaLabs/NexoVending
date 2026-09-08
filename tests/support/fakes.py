@@ -2,8 +2,18 @@
 
 from __future__ import annotations
 
-from nexo_vending.domain.common.ids import MachineId, ProductId, ReplenishmentId, UserId
+from nexo_platform.identity.authentication import Principal
+
+from nexo_vending.domain.common.ids import (
+    MachineId,
+    OperatorId,
+    ProductId,
+    ReplenishmentId,
+    TenantId,
+    UserId,
+)
 from nexo_vending.domain.common.value_objects import Barcode, Quantity
+from nexo_vending.domain.identity.entities import Operator
 from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.ledger import InventoryLedger
 from nexo_vending.domain.machines.entities import Machine
@@ -106,3 +116,26 @@ class InMemoryInventoryAvailability:
     ) -> bool:
         stock = await self._inventory.get_stock(operator_id, product_id)
         return stock >= quantity.value
+
+
+class InMemoryOperatorRepository:
+    def __init__(self) -> None:
+        self._by_id: dict[OperatorId, Operator] = {}
+        self._by_principal: dict[tuple[str, str, str], Operator] = {}
+
+    def _key(self, tenant_id: TenantId, principal: Principal) -> tuple[str, str, str]:
+        return (tenant_id.value, principal.provider, principal.subject)
+
+    async def get(self, operator_id: OperatorId) -> Operator | None:
+        return self._by_id.get(operator_id)
+
+    async def save(self, operator: Operator) -> None:
+        self._by_id[operator.id] = operator
+        self._by_principal[self._key(operator.tenant_id, operator.principal)] = operator
+
+    async def find_by_principal(
+        self,
+        tenant_id: TenantId,
+        principal: Principal,
+    ) -> Operator | None:
+        return self._by_principal.get(self._key(tenant_id, principal))

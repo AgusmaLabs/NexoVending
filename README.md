@@ -20,7 +20,9 @@ NexoPlatform **no** depende de NexoVending.
 
 **V02** — domain foundation (Product, Machine, Inventory ledger, Replenishment aggregate, ports, use cases in-memory).
 
-**Todavía no** incluye persistencia de dominio, API de negocio, Google OAuth ni apps móviles.
+**V03** — tenant-scoped Operator identity & authorization on Platform auth (`nexo-platform==1.2.0`).
+
+**Todavía no** incluye persistencia de dominio, API de negocio HTTP completa ni apps móviles.
 
 ## Requisitos
 
@@ -77,7 +79,8 @@ pytest tests/e2e -q -m e2e
 | [docs/architecture/DEPENDENCIES.md](docs/architecture/DEPENDENCIES.md) | Reglas de dependencia |
 | [docs/api/DOMAIN_CONTRACTS.md](docs/api/DOMAIN_CONTRACTS.md) | Contratos de aplicación/dominio |
 | [MIGRATIONS.md](MIGRATIONS.md) | Migraciones separadas |
-| [docs/adr/](docs/adr/) | ADRs (producto, monolito, ledger, aggregate, tenant) |
+| [docs/architecture/IDENTITY_BOUNDARY.md](docs/architecture/IDENTITY_BOUNDARY.md) | Auth Platform vs Operator Vending |
+| [docs/adr/](docs/adr/) | ADRs (producto, monolito, ledger, aggregate, tenant, auth, operator) |
 
 ## Agent Core
 

@@ -23,14 +23,35 @@ class ProductId:
 
 
 @dataclass(frozen=True, slots=True)
-class UserId:
-    """Operator / user identity reference used by Vending."""
+class OperatorId:
+    """Stable Vending operator identity."""
 
     value: UUID
 
     @classmethod
-    def new(cls) -> UserId:
+    def new(cls) -> OperatorId:
         return cls(uuid4())
+
+
+# Inventory / replenishment continue to reference operators via UserId.
+UserId = OperatorId
+
+
+@dataclass(frozen=True, slots=True)
+class TenantId:
+    """Tenant isolation key obtained from Platform RequestContext."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        normalized = str(self.value).strip()
+        if not normalized:
+            raise ValueError("tenant_id is required")
+        object.__setattr__(self, "value", normalized)
+
+    @classmethod
+    def from_raw(cls, raw: str | UUID) -> TenantId:
+        return cls(str(raw))
 
 
 @dataclass(frozen=True, slots=True)

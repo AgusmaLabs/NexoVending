@@ -21,18 +21,19 @@ domain         ─✕─► api | infrastructure | fastapi | sqlalchemy | nexo_p
 Allowed conceptual dependencies:
 
 ```text
+identity      ──► common + nexo_platform.identity.authentication (Principal only)
 replenishment ──► machines, common
 inventory     ──► common
 machines      ──► common
 products      ──► common
-identity      ──► common
 ```
 
 Forbidden:
 
 ```text
 products ─✕─► replenishment
-domain   ─✕─► nexo_platform.RequestContext
+domain (non-identity) ─✕─► nexo_platform
+domain ─✕─► Google / OAuth / JWT SDKs
 ```
 
 ## Tenant isolation

@@ -9,7 +9,7 @@ description = "NexoVending business product for vending operations. Consumes nex
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "nexo-platform==1.0.0",
+    "nexo-platform==1.2.0",
     "alembic>=1.13,<2",
     "fastapi>=0.115,<1",
     "pydantic-settings>=2.6,<3",

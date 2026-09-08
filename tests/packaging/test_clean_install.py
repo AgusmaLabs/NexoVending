@@ -72,12 +72,18 @@ def test_wheel_installs_and_imports_in_clean_venv(tmp_path: Path) -> None:
             str(python),
             "-c",
             "import nexo_platform, nexo_vending, nexo_vending.domain; "
+            "from importlib.metadata import version; "
             "from nexo_platform import DomainEvent, Tenant, UnitOfWork; "
+            "from nexo_platform.identity.authentication import Principal; "
             "from nexo_vending.domain.replenishment import Replenishment; "
             "from nexo_vending.domain.inventory import InventoryLedger; "
+            "from nexo_vending.domain.identity import Operator; "
+            "assert version('nexo-platform') == '1.2.0'; "
             "assert nexo_vending.__version__; assert Tenant; assert UnitOfWork; "
             "assert DomainEvent(event_type='ok').event_type == 'ok'; "
-            "assert Replenishment is not None; assert InventoryLedger is not None",
+            "assert Principal.__module__.startswith('nexo_platform.'); "
+            "assert Replenishment is not None; assert InventoryLedger is not None; "
+            "assert Operator is not None",
         ],
         check=True,
     )
