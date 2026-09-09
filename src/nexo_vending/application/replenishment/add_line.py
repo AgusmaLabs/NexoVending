@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from nexo_vending.domain.common.errors import DomainError
-from nexo_vending.domain.common.ids import ProductId, ReplenishmentId
+from nexo_vending.domain.common.ids import ProductId, ReplenishmentId, TenantId
 from nexo_vending.domain.common.value_objects import Barcode, Quantity
 from nexo_vending.domain.products.services import ProductLookup
 from nexo_vending.domain.replenishment.entities import Replenishment
@@ -14,6 +14,7 @@ from nexo_vending.domain.replenishment.repositories import ReplenishmentReposito
 @dataclass(frozen=True, slots=True)
 class AddReplenishmentLineCommand:
     replenishment_id: ReplenishmentId
+    tenant_id: TenantId
     barcode: str | None
     quantity: int
     slot: int | None
@@ -42,16 +43,18 @@ class AddReplenishmentLine:
         manual = command.manual_description
 
         if product_id is None and barcode is not None:
-            product = await self._product_lookup.find_by_barcode(barcode)
+            product = await self._product_lookup.find_by_barcode(
+                command.tenant_id,
+                barcode,
+            )
             if product is not None:
                 product_id = product.id
-                snapshot = product.name
+                snapshot = product.display_name
             elif manual:
                 snapshot = manual.strip()
             else:
                 raise DomainError("unknown product requires manual_description")
         elif product_id is not None:
-            # Caller provided identity; snapshot still required on the line.
             snapshot = (manual or "").strip() or "product"
         elif manual:
             snapshot = manual.strip()

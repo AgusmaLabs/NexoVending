@@ -15,7 +15,7 @@ from nexo_vending.application.replenishment.start import (
     StartReplenishment,
     StartReplenishmentCommand,
 )
-from nexo_vending.domain.common.ids import MachineId, ProductId, UserId
+from nexo_vending.domain.common.ids import MachineId, ProductId, TenantId, UserId
 from nexo_vending.domain.common.value_objects import Barcode, GeoLocation
 from nexo_vending.domain.machines.entities import Machine
 from nexo_vending.domain.machines.enums import MachineType
@@ -66,7 +66,14 @@ async def _test_add_line_and_complete_flow() -> None:
     products = InMemoryProductRepository()
     machines = InMemoryMachineRepository()
     replenishments = InMemoryReplenishmentRepository()
-    product = Product(id=ProductId.new(), barcode=Barcode("555"), name="Agua")
+    tenant_id = TenantId("tenant-a")
+    product = Product.create(
+        product_id=ProductId.new(),
+        tenant_id=tenant_id,
+        barcode=Barcode("555"),
+        name="Agua",
+        created_at=datetime(2026, 9, 7, tzinfo=UTC),
+    )
     await products.save(product)
     machine = Machine(
         id=MachineId.new(),
@@ -92,6 +99,7 @@ async def _test_add_line_and_complete_flow() -> None:
     ).execute(
         AddReplenishmentLineCommand(
             replenishment_id=started.id,
+            tenant_id=tenant_id,
             barcode="555",
             quantity=3,
             slot=1,

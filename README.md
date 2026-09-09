@@ -22,7 +22,9 @@ NexoPlatform **no** depende de NexoVending.
 
 **V03** — tenant-scoped Operator identity & authorization on Platform auth (`nexo-platform==1.2.0`).
 
-**Todavía no** incluye persistencia de dominio, API de negocio HTTP completa ni apps móviles.
+**V04** — tenant-scoped Product catalog (barcode, lifecycle, lookup).
+
+**Todavía no** incluye persistencia de dominio, API REST de catálogo ni scanner hardware.
 
 ## Requisitos
 
@@ -80,7 +82,9 @@ pytest tests/e2e -q -m e2e
 | [docs/api/DOMAIN_CONTRACTS.md](docs/api/DOMAIN_CONTRACTS.md) | Contratos de aplicación/dominio |
 | [MIGRATIONS.md](MIGRATIONS.md) | Migraciones separadas |
 | [docs/architecture/IDENTITY_BOUNDARY.md](docs/architecture/IDENTITY_BOUNDARY.md) | Auth Platform vs Operator Vending |
-| [docs/adr/](docs/adr/) | ADRs (producto, monolito, ledger, aggregate, tenant, auth, operator) |
+| [docs/architecture/PRODUCT_CATALOG.md](docs/architecture/PRODUCT_CATALOG.md) | Catálogo de productos |
+| [docs/domain/PRODUCT_CATALOG_RULES.md](docs/domain/PRODUCT_CATALOG_RULES.md) | Reglas del catálogo |
+| [docs/adr/](docs/adr/) | ADRs (producto, monolito, ledger, aggregate, tenant, auth, operator, catalog) |
 
 ## Agent Core
 

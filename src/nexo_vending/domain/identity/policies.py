@@ -26,3 +26,8 @@ def can_manage_inventory(operator: Operator) -> bool:
 
 def can_manage_machines(operator: Operator) -> bool:
     return can_manage_operators(operator)
+
+
+def can_manage_catalog(operator: Operator) -> bool:
+    """Catalog administration is an ADMIN capability in V4."""
+    return can_manage_operators(operator)

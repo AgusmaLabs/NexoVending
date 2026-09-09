@@ -4,6 +4,7 @@ from nexo_vending.domain.identity.entities import Operator
 from nexo_vending.domain.identity.enums import OperatorRole, OperatorStatus
 from nexo_vending.domain.identity.errors import IdentityError, InvalidOperatorTransitionError
 from nexo_vending.domain.identity.policies import (
+    can_manage_catalog,
     can_manage_inventory,
     can_manage_machines,
     can_manage_operators,
@@ -21,6 +22,7 @@ __all__ = [
     "OperatorRole",
     "OperatorStatus",
     "ValidityPeriod",
+    "can_manage_catalog",
     "can_manage_inventory",
     "can_manage_machines",
     "can_manage_operators",

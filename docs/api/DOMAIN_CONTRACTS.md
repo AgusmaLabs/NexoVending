@@ -1,40 +1,35 @@
 # Domain Contracts — NexoVending
 
-Public-facing **domain/application contracts** for V2. These are not HTTP APIs yet.
+Public-facing **domain/application contracts**. These are not HTTP APIs yet.
 
 ## Repository ports
 
 ```python
-ProductRepository.get / find_by_barcode / save
+ProductRepository.get / save / find_by_barcode(tenant_id, barcode) / list_active(tenant_id)
 MachineRepository.get / get_by_code / save
 ReplenishmentRepository.get / find_by_idempotency_key / save
 InventoryRepository.get_stock / record_movement / list_movements
+OperatorRepository.get / save / find_by_principal(tenant_id, principal)
 ```
 
 ## Domain service ports
 
 ```python
-ProductLookup.find_by_barcode(barcode) -> Product | None
+ProductLookup.find_by_barcode(tenant_id, barcode) -> Product | None
 InventoryAvailability.is_available(operator_id, product_id, quantity) -> bool
 ```
 
-## Application commands
+## Application commands (catalog)
 
-### StartReplenishment
+- `CreateProduct` — tenant from `RequestContext`; rejects duplicate barcode in tenant
+- `UpdateProduct` — descriptive fields only; preserves `product_id` / `tenant_id`
+- `ChangeProductBarcode` — explicit commercial identity change
+- `ActivateProduct` / `DeactivateProduct` — soft lifecycle
+- `FindProductByBarcode` — tenant-scoped lookup; unknown → `None` (no auto-create)
 
-Input: `operator_id`, `machine_id`, `started_at`, `geo_location`, `idempotency_key`  
-Output: `Replenishment` (`IN_PROGRESS`)  
-Idempotent on `idempotency_key`.
+## Application commands (replenishment)
 
-### AddReplenishmentLine
-
-Input: `replenishment_id`, barcode / product identity, `quantity`, `slot?`, `manual_description?`, `scanned_at`  
-Output: updated `Replenishment`
-
-### CompleteReplenishment
-
-Input: `replenishment_id`, `completed_at`  
-Output: `Replenishment` (`COMPLETED`)
+- `StartReplenishment` / `AddReplenishmentLine` / `CompleteReplenishment`
 
 ## Status
 

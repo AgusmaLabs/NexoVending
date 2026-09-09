@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -11,6 +12,8 @@ from nexo_vending.domain.common.errors import (
 )
 
 _MAX_BARCODE_LENGTH = 64
+# Pragmatic scannable identifiers (EAN/UPC/Code128-like), not a full standards engine.
+_BARCODE_CHARS = re.compile(r"^[A-Za-z0-9\-._]+$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +28,8 @@ class Barcode:
             raise InvalidBarcodeError(
                 f"barcode length must be <= {_MAX_BARCODE_LENGTH}"
             )
+        if not _BARCODE_CHARS.match(normalized):
+            raise InvalidBarcodeError("barcode contains invalid characters")
         object.__setattr__(self, "value", normalized)
 
     @staticmethod

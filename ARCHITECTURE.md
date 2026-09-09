@@ -52,8 +52,8 @@ infrastructure/      SQLAlchemy engine for health/readiness (domain persistence 
 
 See also:
 
-- [docs/architecture/IDENTITY_BOUNDARY.md](docs/architecture/IDENTITY_BOUNDARY.md)
-- [docs/security/OPERATOR_ACCESS_MODEL.md](docs/security/OPERATOR_ACCESS_MODEL.md)
+- [docs/architecture/PRODUCT_CATALOG.md](docs/architecture/PRODUCT_CATALOG.md)
+- [docs/domain/PRODUCT_CATALOG_RULES.md](docs/domain/PRODUCT_CATALOG_RULES.md)
 
 ## Runtime
 
@@ -79,6 +79,7 @@ Domain aggregates / ledger
 | Domain foundation + replenishment aggregate | Implemented |
 | Inventory ledger model | Implemented |
 | Tenant-scoped Operator identity + authorization | Implemented |
+| Tenant-scoped Product catalog | Implemented |
 | Repository / domain service Protocols | Implemented |
 | PostgreSQL domain persistence | Planned |
 | Business HTTP API | Planned |

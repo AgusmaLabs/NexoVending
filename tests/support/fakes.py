@@ -24,17 +24,34 @@ from nexo_vending.domain.replenishment.entities import Replenishment
 class InMemoryProductRepository:
     def __init__(self) -> None:
         self._by_id: dict[ProductId, Product] = {}
-        self._by_barcode: dict[str, Product] = {}
+        self._by_tenant_barcode: dict[tuple[str, str], Product] = {}
 
     async def get(self, product_id: ProductId) -> Product | None:
         return self._by_id.get(product_id)
 
-    async def find_by_barcode(self, barcode: Barcode) -> Product | None:
-        return self._by_barcode.get(barcode.value)
+    async def find_by_barcode(
+        self,
+        tenant_id: TenantId,
+        barcode: Barcode,
+    ) -> Product | None:
+        return self._by_tenant_barcode.get((tenant_id.value, barcode.value))
+
+    async def list_active(self, tenant_id: TenantId) -> list[Product]:
+        from nexo_vending.domain.products.enums import ProductStatus
+
+        return [
+            product
+            for product in self._by_id.values()
+            if product.tenant_id == tenant_id and product.status == ProductStatus.ACTIVE
+        ]
 
     async def save(self, product: Product) -> None:
+        # Drop previous barcode index for this product id if barcode changed.
+        for key, existing in list(self._by_tenant_barcode.items()):
+            if existing.id == product.id:
+                del self._by_tenant_barcode[key]
         self._by_id[product.id] = product
-        self._by_barcode[product.barcode.value] = product
+        self._by_tenant_barcode[(product.tenant_id.value, product.barcode.value)] = product
 
 
 class InMemoryMachineRepository:
@@ -100,8 +117,12 @@ class InMemoryProductLookup:
     def __init__(self, products: InMemoryProductRepository) -> None:
         self._products = products
 
-    async def find_by_barcode(self, barcode: Barcode) -> Product | None:
-        return await self._products.find_by_barcode(barcode)
+    async def find_by_barcode(
+        self,
+        tenant_id: TenantId,
+        barcode: Barcode,
+    ) -> Product | None:
+        return await self._products.find_by_barcode(tenant_id, barcode)
 
 
 class InMemoryInventoryAvailability:

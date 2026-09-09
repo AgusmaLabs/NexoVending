@@ -38,7 +38,7 @@ Status: **Implemented** (in-memory domain foundation). Persistence adapters are 
 | --- | --- |
 | `domain.common` | IDs, value objects, domain errors |
 | `domain.identity` | Operator lifecycle, validity, Vending authorization policies |
-| `domain.products` | Product catalog entity + lookup/repository ports |
+| `domain.products` | Tenant-scoped Product aggregate, barcode lookup, catalog lifecycle |
 | `domain.machines` | Machine, MachineSlot, MachineType |
 | `domain.inventory` | InventoryMovement + InventoryLedger |
 | `domain.replenishment` | Replenishment aggregate + lines |
