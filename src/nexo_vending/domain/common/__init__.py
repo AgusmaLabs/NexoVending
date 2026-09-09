@@ -5,6 +5,7 @@ from nexo_vending.domain.common.ids import (
     OperatorId,
     ProductId,
     ReplenishmentId,
+    SlotId,
     TenantId,
     UserId,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "ProductId",
     "Quantity",
     "ReplenishmentId",
+    "SlotId",
     "TenantId",
     "UserId",
 ]

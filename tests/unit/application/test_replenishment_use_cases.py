@@ -36,11 +36,13 @@ def test_start_replenishment_idempotent() -> None:
 async def _test_start_replenishment_idempotent() -> None:
     machines = InMemoryMachineRepository()
     replenishments = InMemoryReplenishmentRepository()
-    machine = Machine(
-        id=MachineId.new(),
+    machine = Machine.create(
+        machine_id=MachineId.new(),
+        tenant_id=TenantId("tenant-a"),
         code="VM-1",
         name="Lobby",
-        type=MachineType.SNACK,
+        machine_type=MachineType.SNACK,
+        created_at=datetime(2026, 9, 7, tzinfo=UTC),
     )
     await machines.save(machine)
 
@@ -75,11 +77,13 @@ async def _test_add_line_and_complete_flow() -> None:
         created_at=datetime(2026, 9, 7, tzinfo=UTC),
     )
     await products.save(product)
-    machine = Machine(
-        id=MachineId.new(),
+    machine = Machine.create(
+        machine_id=MachineId.new(),
+        tenant_id=tenant_id,
         code="VM-2",
         name="Hall",
-        type=MachineType.SNACK,
+        machine_type=MachineType.SNACK,
+        created_at=datetime(2026, 9, 7, tzinfo=UTC),
     )
     await machines.save(machine)
 

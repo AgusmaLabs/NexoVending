@@ -39,12 +39,12 @@ Forbidden in **domain**: any `nexo_platform` import.
 
 ```text
 api/                 FastAPI adapters (thin)
-application/         use cases (Start/Add/Complete Replenishment)
+application/         use cases (identity, products, machines, replenishment)
 domain/
   common/            IDs, VOs, errors
   identity/          Operator contract
   products/          Product + ports
-  machines/          Machine, MachineSlot, MachineType
+  machines/          Machine aggregate + physical slots
   inventory/         InventoryMovement + InventoryLedger
   replenishment/     Replenishment aggregate
 infrastructure/      SQLAlchemy engine for health/readiness (domain persistence planned)
@@ -53,7 +53,9 @@ infrastructure/      SQLAlchemy engine for health/readiness (domain persistence 
 See also:
 
 - [docs/architecture/PRODUCT_CATALOG.md](docs/architecture/PRODUCT_CATALOG.md)
+- [docs/architecture/MACHINE_MANAGEMENT.md](docs/architecture/MACHINE_MANAGEMENT.md)
 - [docs/domain/PRODUCT_CATALOG_RULES.md](docs/domain/PRODUCT_CATALOG_RULES.md)
+- [docs/domain/MACHINE_AND_SLOT_RULES.md](docs/domain/MACHINE_AND_SLOT_RULES.md)
 
 ## Runtime
 
@@ -80,6 +82,7 @@ Domain aggregates / ledger
 | Inventory ledger model | Implemented |
 | Tenant-scoped Operator identity + authorization | Implemented |
 | Tenant-scoped Product catalog | Implemented |
+| Machine & physical slot configuration | Implemented |
 | Repository / domain service Protocols | Implemented |
 | PostgreSQL domain persistence | Planned |
 | Business HTTP API | Planned |

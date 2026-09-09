@@ -8,7 +8,7 @@ from nexo_vending.domain.common.errors import (
     InvalidReplenishmentLineError,
     InvalidReplenishmentStateError,
 )
-from nexo_vending.domain.common.ids import MachineId, ProductId, ReplenishmentId, UserId
+from nexo_vending.domain.common.ids import MachineId, ProductId, ReplenishmentId, TenantId, UserId
 from nexo_vending.domain.common.value_objects import Barcode, GeoLocation, Quantity
 from nexo_vending.domain.machines.entities import Machine
 from nexo_vending.domain.machines.enums import MachineType
@@ -17,21 +17,27 @@ from nexo_vending.domain.replenishment.enums import ReplenishmentStatus
 
 
 def _snack_machine(*, active: bool = True) -> Machine:
-    return Machine(
-        id=MachineId.new(),
+    machine = Machine.create(
+        machine_id=MachineId.new(),
+        tenant_id=TenantId("tenant-a"),
         code="VM-S1",
         name="Snack 1",
-        type=MachineType.SNACK,
-        active=active,
+        machine_type=MachineType.SNACK,
+        created_at=datetime(2026, 9, 7, tzinfo=UTC),
     )
+    if not active:
+        machine.deactivate()
+    return machine
 
 
 def _coffee_machine() -> Machine:
-    return Machine(
-        id=MachineId.new(),
+    return Machine.create(
+        machine_id=MachineId.new(),
+        tenant_id=TenantId("tenant-a"),
         code="VM-C1",
         name="Coffee 1",
-        type=MachineType.COFFEE,
+        machine_type=MachineType.COFFEE,
+        created_at=datetime(2026, 9, 7, tzinfo=UTC),
     )
 
 

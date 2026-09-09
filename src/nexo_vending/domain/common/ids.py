@@ -64,6 +64,15 @@ class ReplenishmentId:
 
 
 @dataclass(frozen=True, slots=True)
+class SlotId:
+    value: UUID
+
+    @classmethod
+    def new(cls) -> SlotId:
+        return cls(uuid4())
+
+
+@dataclass(frozen=True, slots=True)
 class InventoryMovementId:
     value: UUID
 

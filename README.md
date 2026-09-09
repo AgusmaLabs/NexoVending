@@ -24,7 +24,9 @@ NexoPlatform **no** depende de NexoVending.
 
 **V04** — tenant-scoped Product catalog (barcode, lifecycle, lookup).
 
-**Todavía no** incluye persistencia de dominio, API REST de catálogo ni scanner hardware.
+**V05** — Machine & physical slot configuration (SNACK/COFFEE/MIXED, capacity, preferred product, selling price).
+
+**Todavía no** incluye persistencia de dominio, API REST de negocio ni scanner hardware.
 
 ## Requisitos
 

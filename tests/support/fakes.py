@@ -57,17 +57,36 @@ class InMemoryProductRepository:
 class InMemoryMachineRepository:
     def __init__(self) -> None:
         self._by_id: dict[MachineId, Machine] = {}
-        self._by_code: dict[str, Machine] = {}
+        self._by_tenant_code: dict[tuple[str, str], Machine] = {}
 
     async def get(self, machine_id: MachineId) -> Machine | None:
         return self._by_id.get(machine_id)
 
+    async def find_by_code(self, tenant_id: TenantId, code) -> Machine | None:
+        from nexo_vending.domain.machines.value_objects import MachineCode
+
+        normalized = code if isinstance(code, MachineCode) else MachineCode(str(code))
+        return self._by_tenant_code.get((tenant_id.value, normalized.value))
+
     async def get_by_code(self, code: str) -> Machine | None:
-        return self._by_code.get(code.strip())
+        # Backward-compatible helper for older tests; prefer find_by_code.
+        from nexo_vending.domain.machines.value_objects import MachineCode
+
+        normalized = MachineCode(code).value
+        for (_tenant, machine_code), machine in self._by_tenant_code.items():
+            if machine_code == normalized:
+                return machine
+        return None
+
+    async def list_by_tenant(self, tenant_id: TenantId) -> list[Machine]:
+        return [m for m in self._by_id.values() if m.tenant_id == tenant_id]
 
     async def save(self, machine: Machine) -> None:
+        for key, existing in list(self._by_tenant_code.items()):
+            if existing.id == machine.id:
+                del self._by_tenant_code[key]
         self._by_id[machine.id] = machine
-        self._by_code[machine.code] = machine
+        self._by_tenant_code[(machine.tenant_id.value, machine.code.value)] = machine
 
 
 class InMemoryReplenishmentRepository:
