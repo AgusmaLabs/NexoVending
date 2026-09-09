@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 
 from nexo_vending.domain.common.errors import (
     InactiveMachineError,
@@ -12,47 +13,56 @@ from nexo_vending.domain.common.ids import (
     MachineId,
     ProductId,
     ReplenishmentId,
+    ReplenishmentLineId,
+    SlotId,
     UserId,
 )
 from nexo_vending.domain.common.value_objects import (
     Barcode,
     GeoLocation,
-    Quantity,
+    SignedQuantity,
     require_aware,
 )
-from nexo_vending.domain.machines.entities import Machine
+from nexo_vending.domain.machines.entities import Machine, MachineSlot
 from nexo_vending.domain.machines.enums import MachineType
-from nexo_vending.domain.replenishment.enums import ReplenishmentStatus
+from nexo_vending.domain.replenishment.capacity import validate_operation_capacity
+from nexo_vending.domain.replenishment.enums import (
+    ReplacementReason,
+    ReplenishmentStatus,
+)
+from nexo_vending.domain.replenishment.substitution import resolve_substitution
 
 
 @dataclass(frozen=True, slots=True)
 class ReplenishmentLine:
-    product_id: ProductId | None
-    barcode_scanned: Barcode | None
+    id: ReplenishmentLineId
+    machine_position_id: SlotId
+    product_id: ProductId
+    quantity: SignedQuantity
+    unit_price: Decimal
+    occurred_at: datetime
     product_description_snapshot: str
-    manual_description: str | None
-    quantity: Quantity
-    slot: int | None
-    scanned_at: datetime
+    preferred_product_id_snapshot: ProductId | None = None
+    replacement_reason: ReplacementReason | None = None
+    barcode_scanned: Barcode | None = None
+    manual_description: str | None = None
 
     def __post_init__(self) -> None:
-        require_aware(self.scanned_at, field_name="scanned_at")
+        require_aware(self.occurred_at, field_name="occurred_at")
         snapshot = self.product_description_snapshot.strip()
         if not snapshot:
             raise InvalidReplenishmentLineError(
                 "product_description_snapshot is required"
             )
         object.__setattr__(self, "product_description_snapshot", snapshot)
-
+        price = Decimal(self.unit_price)
+        if price < 0:
+            raise InvalidReplenishmentLineError("unit_price must be >= 0")
+        object.__setattr__(self, "unit_price", price)
         manual = self.manual_description.strip() if self.manual_description else None
         if manual == "":
             manual = None
         object.__setattr__(self, "manual_description", manual)
-
-        if self.product_id is None and manual is None:
-            raise InvalidReplenishmentLineError(
-                "unknown product requires manual_description"
-            )
 
 
 @dataclass(slots=True)
@@ -115,37 +125,50 @@ class Replenishment:
     def add_line(
         self,
         *,
-        product_id: ProductId | None,
-        barcode_scanned: Barcode | None,
+        machine: Machine,
+        slot: MachineSlot,
+        product_id: ProductId,
+        quantity: SignedQuantity | int,
+        unit_price: Decimal | int | float | str,
+        occurred_at: datetime,
         product_description_snapshot: str,
-        manual_description: str | None,
-        quantity: Quantity,
-        slot: int | None,
-        scanned_at: datetime,
+        replacement_reason: ReplacementReason | None = None,
+        barcode_scanned: Barcode | None = None,
+        manual_description: str | None = None,
+        line_id: ReplenishmentLineId | None = None,
     ) -> ReplenishmentLine:
         self._ensure_in_progress()
+        if machine.id != self.machine_id:
+            raise InvalidReplenishmentLineError("line machine mismatch")
+        if machine.find_slot(slot.id) is None:
+            raise InvalidReplenishmentLineError("slot does not belong to machine")
 
-        if self.machine_type == MachineType.SNACK:
-            if slot is None:
-                raise InvalidReplenishmentLineError("snack replenishment requires slot")
-            if slot <= 0:
-                raise InvalidReplenishmentLineError("slot must be > 0")
-        elif self.machine_type == MachineType.COFFEE:
-            if slot is not None:
-                raise InvalidReplenishmentLineError("coffee replenishment does not use slot")
+        signed = (
+            quantity if isinstance(quantity, SignedQuantity) else SignedQuantity(quantity)
+        )
+        validate_operation_capacity(quantity=signed, capacity=slot.capacity)
 
-        if product_id is not None and manual_description and manual_description.strip():
-            # Known products may still carry optional notes, but snapshot is authoritative.
-            pass
+        price = Decimal(str(unit_price))
+        preferred_snapshot, reason = resolve_substitution(
+            preferred_product_id=slot.preferred_product_id,
+            actual_product_id=product_id,
+            configured_price=slot.selling_price,
+            unit_price=price,
+            replacement_reason=replacement_reason,
+        )
 
         line = ReplenishmentLine(
+            id=line_id or ReplenishmentLineId.new(),
+            machine_position_id=slot.id,
             product_id=product_id,
-            barcode_scanned=barcode_scanned,
+            quantity=signed,
+            unit_price=price,
+            occurred_at=occurred_at,
             product_description_snapshot=product_description_snapshot,
+            preferred_product_id_snapshot=preferred_snapshot,
+            replacement_reason=reason,
+            barcode_scanned=barcode_scanned,
             manual_description=manual_description,
-            quantity=quantity,
-            slot=slot,
-            scanned_at=scanned_at,
         )
         self._lines.append(line)
         return line

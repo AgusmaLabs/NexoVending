@@ -2,16 +2,17 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from nexo_vending.domain.common.ids import ProductId, UserId
+from nexo_vending.domain.common.ids import ProductId
 from nexo_vending.domain.common.value_objects import Quantity
+from nexo_vending.domain.inventory.locations import InventoryLocation
 
 
 class InventoryAvailability(Protocol):
-    """Whether an operator has enough stock of a product for a quantity."""
+    """Whether a custody/machine location has enough stock of a product."""
 
     async def is_available(
         self,
-        operator_id: UserId,
+        location: InventoryLocation,
         product_id: ProductId,
         quantity: Quantity,
     ) -> bool: ...

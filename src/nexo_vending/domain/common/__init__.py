@@ -9,7 +9,12 @@ from nexo_vending.domain.common.ids import (
     TenantId,
     UserId,
 )
-from nexo_vending.domain.common.value_objects import Barcode, GeoLocation, Quantity
+from nexo_vending.domain.common.value_objects import (
+    Barcode,
+    GeoLocation,
+    Quantity,
+    SignedQuantity,
+)
 
 __all__ = [
     "Barcode",
@@ -21,6 +26,7 @@ __all__ = [
     "ProductId",
     "Quantity",
     "ReplenishmentId",
+    "SignedQuantity",
     "SlotId",
     "TenantId",
     "UserId",

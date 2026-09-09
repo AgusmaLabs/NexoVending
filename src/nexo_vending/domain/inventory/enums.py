@@ -1,9 +1,33 @@
 from enum import StrEnum
 
 
+class InventoryLocationType(StrEnum):
+    ADMINISTRATOR = "ADMINISTRATOR"
+    REPLENISHER = "REPLENISHER"
+    MACHINE_SLOT = "MACHINE_SLOT"
+    MACHINE_CONTAINER = "MACHINE_CONTAINER"
+
+
 class InventoryMovementType(StrEnum):
     ASSIGNMENT = "ASSIGNMENT"
     REPLENISHMENT = "REPLENISHMENT"
+    SLOT_REMOVAL = "SLOT_REMOVAL"
     RETURN = "RETURN"
     ADJUSTMENT = "ADJUSTMENT"
     LOSS = "LOSS"
+
+
+class InventoryReferenceType(StrEnum):
+    PURCHASE = "PURCHASE"
+    ASSIGNMENT = "ASSIGNMENT"
+    REPLENISHMENT = "REPLENISHMENT"
+    RETURN = "RETURN"
+    COUNT = "COUNT"
+    SALE = "SALE"
+    MANUAL = "MANUAL"
+
+
+class InventoryCountStatus(StrEnum):
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"

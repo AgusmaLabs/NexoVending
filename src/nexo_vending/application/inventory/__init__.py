@@ -1,0 +1,1 @@
+"""Inventory application use cases."""

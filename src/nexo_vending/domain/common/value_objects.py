@@ -39,11 +39,36 @@ class Barcode:
 
 @dataclass(frozen=True, slots=True)
 class Quantity:
+    """Strictly positive quantity (stock magnitudes, count amounts)."""
+
     value: int
 
     def __post_init__(self) -> None:
         if self.value <= 0:
             raise InvalidQuantityError("quantity must be > 0")
+
+
+@dataclass(frozen=True, slots=True)
+class SignedQuantity:
+    """Non-zero signed quantity for load (+) / unload (-) replenishment lines."""
+
+    value: int
+
+    def __post_init__(self) -> None:
+        if self.value == 0:
+            raise InvalidQuantityError("quantity must not be 0")
+
+    @property
+    def absolute(self) -> int:
+        return abs(self.value)
+
+    @property
+    def is_load(self) -> bool:
+        return self.value > 0
+
+    @property
+    def is_unload(self) -> bool:
+        return self.value < 0
 
 
 @dataclass(frozen=True, slots=True)

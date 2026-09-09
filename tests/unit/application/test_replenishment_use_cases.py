@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from nexo_vending.application.replenishment.add_line import (
     AddReplenishmentLine,
     AddReplenishmentLineCommand,
+)
+from nexo_vending.application.replenishment.cancel import (
+    CancelReplenishment,
+    CancelReplenishmentCommand,
 )
 from nexo_vending.application.replenishment.complete import (
     CompleteReplenishment,
@@ -19,6 +24,7 @@ from nexo_vending.domain.common.ids import MachineId, ProductId, TenantId, UserI
 from nexo_vending.domain.common.value_objects import Barcode, GeoLocation
 from nexo_vending.domain.machines.entities import Machine
 from nexo_vending.domain.machines.enums import MachineType
+from nexo_vending.domain.machines.value_objects import SellingPrice
 from nexo_vending.domain.products.entities import Product
 from nexo_vending.domain.replenishment.enums import ReplenishmentStatus
 from tests.support.fakes import (
@@ -60,11 +66,11 @@ async def _test_start_replenishment_idempotent() -> None:
     assert first.status == ReplenishmentStatus.IN_PROGRESS
 
 
-def test_add_line_and_complete_flow() -> None:
-    asyncio.run(_test_add_line_and_complete_flow())
+def test_add_line_complete_and_cancel_flow() -> None:
+    asyncio.run(_test_add_line_complete_and_cancel_flow())
 
 
-async def _test_add_line_and_complete_flow() -> None:
+async def _test_add_line_complete_and_cancel_flow() -> None:
     products = InMemoryProductRepository()
     machines = InMemoryMachineRepository()
     replenishments = InMemoryReplenishmentRepository()
@@ -85,6 +91,11 @@ async def _test_add_line_and_complete_flow() -> None:
         machine_type=MachineType.SNACK,
         created_at=datetime(2026, 9, 7, tzinfo=UTC),
     )
+    slot = machine.add_slot(
+        slot_number=1,
+        capacity=12,
+        selling_price=SellingPrice(amount=Decimal("1000")),
+    )
     await machines.save(machine)
 
     started = await StartReplenishment(machines, replenishments).execute(
@@ -99,6 +110,7 @@ async def _test_add_line_and_complete_flow() -> None:
 
     updated = await AddReplenishmentLine(
         replenishments,
+        machines,
         InMemoryProductLookup(products),
     ).execute(
         AddReplenishmentLineCommand(
@@ -106,7 +118,8 @@ async def _test_add_line_and_complete_flow() -> None:
             tenant_id=tenant_id,
             barcode="555",
             quantity=3,
-            slot=1,
+            slot_id=slot.id,
+            unit_price=Decimal("1000"),
             scanned_at=datetime(2026, 9, 7, 12, 10, tzinfo=UTC),
         )
     )
@@ -122,3 +135,18 @@ async def _test_add_line_and_complete_flow() -> None:
     )
     assert completed.status == ReplenishmentStatus.COMPLETED
     assert completed.completed_at is not None
+
+    # Separate visit for cancel path
+    other = await StartReplenishment(machines, replenishments).execute(
+        StartReplenishmentCommand(
+            operator_id=UserId.new(),
+            machine_id=machine.id,
+            started_at=datetime(2026, 9, 7, 14, 0, tzinfo=UTC),
+            location=GeoLocation(latitude=-33.0, longitude=-70.0, accuracy=2.0),
+            idempotency_key="visit-3",
+        )
+    )
+    cancelled = await CancelReplenishment(replenishments).execute(
+        CancelReplenishmentCommand(replenishment_id=other.id)
+    )
+    assert cancelled.status == ReplenishmentStatus.CANCELLED

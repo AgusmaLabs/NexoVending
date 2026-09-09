@@ -10,12 +10,12 @@ from nexo_vending.domain.common.ids import (
     ProductId,
     ReplenishmentId,
     TenantId,
-    UserId,
 )
 from nexo_vending.domain.common.value_objects import Barcode, Quantity
 from nexo_vending.domain.identity.entities import Operator
 from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.ledger import InventoryLedger
+from nexo_vending.domain.inventory.locations import InventoryLocation
 from nexo_vending.domain.machines.entities import Machine
 from nexo_vending.domain.products.entities import Product
 from nexo_vending.domain.replenishment.entities import Replenishment
@@ -109,27 +109,64 @@ class InMemoryInventoryRepository:
     def __init__(self) -> None:
         self._movements: list[InventoryMovement] = []
 
-    async def list_movements(
+    async def list_movements_for_location(
         self,
-        operator_id: UserId,
-        product_id: ProductId,
+        location: InventoryLocation,
+        product_id: ProductId | None = None,
     ) -> list[InventoryMovement]:
-        return [
-            m
-            for m in self._movements
-            if m.operator_id == operator_id and m.product_id == product_id
-        ]
+        result: list[InventoryMovement] = []
+        for movement in self._movements:
+            if product_id is not None and movement.product_id != product_id:
+                continue
+            if (
+                movement.source_location == location
+                or movement.destination_location == location
+            ):
+                result.append(movement)
+        return result
 
-    async def get_stock(self, operator_id: UserId, product_id: ProductId) -> int:
-        return InventoryLedger.stock_for(
+    async def expected_quantity(
+        self,
+        location: InventoryLocation,
+        product_id: ProductId,
+    ) -> int:
+        return InventoryLedger.expected_quantity(
             self._movements,
-            operator_id=operator_id,
+            location=location,
             product_id=product_id,
         )
 
     async def record_movement(self, movement: InventoryMovement) -> None:
         InventoryLedger.ensure_can_apply(self._movements, movement)
         self._movements.append(movement)
+
+    async def list_all(self) -> list[InventoryMovement]:
+        return list(self._movements)
+
+
+class InMemoryInventoryCountRepository:
+    def __init__(self) -> None:
+        self._by_id: dict = {}
+
+    async def get(self, count_id):
+        return self._by_id.get(count_id)
+
+    async def save(self, count) -> None:
+        self._by_id[count.id] = count
+
+
+class InMemoryInventoryAvailability:
+    def __init__(self, inventory: InMemoryInventoryRepository) -> None:
+        self._inventory = inventory
+
+    async def is_available(
+        self,
+        location: InventoryLocation,
+        product_id: ProductId,
+        quantity: Quantity,
+    ) -> bool:
+        stock = await self._inventory.expected_quantity(location, product_id)
+        return stock >= quantity.value
 
 
 class InMemoryProductLookup:
@@ -142,20 +179,6 @@ class InMemoryProductLookup:
         barcode: Barcode,
     ) -> Product | None:
         return await self._products.find_by_barcode(tenant_id, barcode)
-
-
-class InMemoryInventoryAvailability:
-    def __init__(self, inventory: InMemoryInventoryRepository) -> None:
-        self._inventory = inventory
-
-    async def is_available(
-        self,
-        operator_id: UserId,
-        product_id: ProductId,
-        quantity: Quantity,
-    ) -> bool:
-        stock = await self._inventory.get_stock(operator_id, product_id)
-        return stock >= quantity.value
 
 
 class InMemoryOperatorRepository:

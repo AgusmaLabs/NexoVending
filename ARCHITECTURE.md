@@ -54,6 +54,7 @@ See also:
 
 - [docs/architecture/PRODUCT_CATALOG.md](docs/architecture/PRODUCT_CATALOG.md)
 - [docs/architecture/MACHINE_MANAGEMENT.md](docs/architecture/MACHINE_MANAGEMENT.md)
+- [docs/architecture/INVENTORY_AND_REPLENISHMENT.md](docs/architecture/INVENTORY_AND_REPLENISHMENT.md)
 - [docs/domain/PRODUCT_CATALOG_RULES.md](docs/domain/PRODUCT_CATALOG_RULES.md)
 - [docs/domain/MACHINE_AND_SLOT_RULES.md](docs/domain/MACHINE_AND_SLOT_RULES.md)
 
@@ -83,6 +84,7 @@ Domain aggregates / ledger
 | Tenant-scoped Operator identity + authorization | Implemented |
 | Tenant-scoped Product catalog | Implemented |
 | Machine & physical slot configuration | Implemented |
+| Inventory custody ledger + machine periods + sales consumption | Implemented |
 | Repository / domain service Protocols | Implemented |
 | PostgreSQL domain persistence | Planned |
 | Business HTTP API | Planned |

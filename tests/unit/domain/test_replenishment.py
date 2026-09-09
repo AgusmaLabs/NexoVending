@@ -1,48 +1,47 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 
 from nexo_vending.domain.common.errors import (
+    CapacityExceededError,
     InactiveMachineError,
     InvalidQuantityError,
-    InvalidReplenishmentLineError,
     InvalidReplenishmentStateError,
+    SubstitutionRejectedError,
 )
 from nexo_vending.domain.common.ids import MachineId, ProductId, ReplenishmentId, TenantId, UserId
-from nexo_vending.domain.common.value_objects import Barcode, GeoLocation, Quantity
+from nexo_vending.domain.common.value_objects import GeoLocation, SignedQuantity
 from nexo_vending.domain.machines.entities import Machine
 from nexo_vending.domain.machines.enums import MachineType
+from nexo_vending.domain.machines.value_objects import SellingPrice
 from nexo_vending.domain.replenishment.entities import Replenishment
-from nexo_vending.domain.replenishment.enums import ReplenishmentStatus
+from nexo_vending.domain.replenishment.enums import ReplacementReason, ReplenishmentStatus
 
 
-def _snack_machine(*, active: bool = True) -> Machine:
+def _machine_with_slot(
+    *,
+    capacity: int = 5,
+    preferred: ProductId | None = None,
+    price: Decimal | None = Decimal("1500"),
+    machine_type: MachineType = MachineType.SNACK,
+) -> tuple[Machine, object]:
     machine = Machine.create(
         machine_id=MachineId.new(),
         tenant_id=TenantId("tenant-a"),
         code="VM-S1",
         name="Snack 1",
-        machine_type=MachineType.SNACK,
+        machine_type=machine_type,
         created_at=datetime(2026, 9, 7, tzinfo=UTC),
     )
-    if not active:
-        machine.deactivate()
-    return machine
-
-
-def _coffee_machine() -> Machine:
-    return Machine.create(
-        machine_id=MachineId.new(),
-        tenant_id=TenantId("tenant-a"),
-        code="VM-C1",
-        name="Coffee 1",
-        machine_type=MachineType.COFFEE,
-        created_at=datetime(2026, 9, 7, tzinfo=UTC),
+    selling = SellingPrice(amount=price) if price is not None else None
+    slot = machine.add_slot(
+        slot_number=1,
+        capacity=capacity,
+        preferred_product_id=preferred,
+        selling_price=selling,
     )
-
-
-def _location() -> GeoLocation:
-    return GeoLocation(latitude=-33.4, longitude=-70.6, accuracy=4.0)
+    return machine, slot
 
 
 def _start(machine: Machine) -> Replenishment:
@@ -51,150 +50,202 @@ def _start(machine: Machine) -> Replenishment:
         operator_id=UserId.new(),
         machine=machine,
         started_at=datetime(2026, 9, 7, 12, 0, tzinfo=UTC),
-        location=_location(),
+        location=GeoLocation(latitude=-33.4, longitude=-70.6, accuracy=4.0),
         idempotency_key="key-1",
     )
 
 
-def test_create_replenishment() -> None:
-    replenishment = _start(_snack_machine())
-    assert replenishment.machine_id is not None
-    assert replenishment.idempotency_key == "key-1"
+def test_rep_01_create_replenishment() -> None:
+    machine, _ = _machine_with_slot()
+    replenishment = _start(machine)
+    assert replenishment.status == ReplenishmentStatus.IN_PROGRESS
+    assert replenishment.machine_id == machine.id
 
 
-def test_replenishment_starts_in_progress() -> None:
-    assert _start(_snack_machine()).status == ReplenishmentStatus.IN_PROGRESS
-
-
-def test_inactive_machine_rejected() -> None:
-    with pytest.raises(InactiveMachineError):
-        _start(_snack_machine(active=False))
-
-
-def test_add_product_line() -> None:
-    replenishment = _start(_snack_machine())
+def test_rep_02_add_positive_line() -> None:
+    machine, slot = _machine_with_slot()
+    replenishment = _start(machine)
     line = replenishment.add_line(
+        machine=machine,
+        slot=slot,
         product_id=ProductId.new(),
-        barcode_scanned=Barcode("123"),
+        quantity=SignedQuantity(5),
+        unit_price=Decimal("1500"),
+        occurred_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
         product_description_snapshot="Cola",
-        manual_description=None,
-        quantity=Quantity(2),
-        slot=1,
-        scanned_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
     )
-    assert len(replenishment.lines) == 1
-    assert line.quantity.value == 2
+    assert line.quantity.value == 5
+    assert line.quantity.is_load
 
 
-def test_quantity_must_be_positive() -> None:
-    replenishment = _start(_snack_machine())
+def test_rep_03_add_negative_line() -> None:
+    machine, slot = _machine_with_slot()
+    replenishment = _start(machine)
+    line = replenishment.add_line(
+        machine=machine,
+        slot=slot,
+        product_id=ProductId.new(),
+        quantity=-3,
+        unit_price=Decimal("1500"),
+        occurred_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
+        product_description_snapshot="Cola",
+    )
+    assert line.quantity.value == -3
+    assert line.quantity.is_unload
+
+
+def test_rep_04_reject_zero_quantity() -> None:
     with pytest.raises(InvalidQuantityError):
-        replenishment.add_line(
-            product_id=ProductId.new(),
-            barcode_scanned=None,
-            product_description_snapshot="Cola",
-            manual_description=None,
-            quantity=Quantity(0),
-            slot=1,
-            scanned_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
-        )
+        SignedQuantity(0)
 
 
-def test_snack_requires_slot() -> None:
-    replenishment = _start(_snack_machine())
-    with pytest.raises(InvalidReplenishmentLineError):
-        replenishment.add_line(
-            product_id=ProductId.new(),
-            barcode_scanned=None,
-            product_description_snapshot="Cola",
-            manual_description=None,
-            quantity=Quantity(1),
-            slot=None,
-            scanned_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
-        )
-
-
-def test_coffee_does_not_allow_slot() -> None:
-    replenishment = _start(_coffee_machine())
-    with pytest.raises(InvalidReplenishmentLineError):
-        replenishment.add_line(
-            product_id=ProductId.new(),
-            barcode_scanned=None,
-            product_description_snapshot="Coffee beans",
-            manual_description=None,
-            quantity=Quantity(1),
-            slot=1,
-            scanned_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
-        )
-
-
-def test_unknown_product_requires_description() -> None:
-    replenishment = _start(_snack_machine())
-    with pytest.raises(InvalidReplenishmentLineError):
-        replenishment.add_line(
-            product_id=None,
-            barcode_scanned=Barcode("999"),
-            product_description_snapshot="x",
-            manual_description=None,
-            quantity=Quantity(1),
-            slot=1,
-            scanned_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
-        )
-
-
-def test_known_product_does_not_require_manual_description() -> None:
-    replenishment = _start(_snack_machine())
-    replenishment.add_line(
-        product_id=ProductId.new(),
-        barcode_scanned=Barcode("123"),
-        product_description_snapshot="Cola",
-        manual_description=None,
-        quantity=Quantity(1),
-        slot=2,
-        scanned_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
-    )
-    assert replenishment.lines[0].manual_description is None
-
-
-def test_completed_replenishment_cannot_add_lines() -> None:
-    replenishment = _start(_snack_machine())
-    replenishment.complete(completed_at=datetime(2026, 9, 7, 13, 0, tzinfo=UTC))
-    with pytest.raises(InvalidReplenishmentStateError):
-        replenishment.add_line(
-            product_id=ProductId.new(),
-            barcode_scanned=None,
-            product_description_snapshot="Cola",
-            manual_description=None,
-            quantity=Quantity(1),
-            slot=1,
-            scanned_at=datetime(2026, 9, 7, 13, 1, tzinfo=UTC),
-        )
-
-
-def test_cancelled_replenishment_cannot_add_lines() -> None:
-    replenishment = _start(_snack_machine())
-    replenishment.cancel()
-    with pytest.raises(InvalidReplenishmentStateError):
-        replenishment.add_line(
-            product_id=ProductId.new(),
-            barcode_scanned=None,
-            product_description_snapshot="Cola",
-            manual_description=None,
-            quantity=Quantity(1),
-            slot=1,
-            scanned_at=datetime(2026, 9, 7, 13, 1, tzinfo=UTC),
-        )
-
-
-def test_complete_replenishment() -> None:
-    replenishment = _start(_snack_machine())
+def test_rep_05_complete() -> None:
+    machine, _ = _machine_with_slot()
+    replenishment = _start(machine)
     completed_at = datetime(2026, 9, 7, 13, 0, tzinfo=UTC)
     replenishment.complete(completed_at=completed_at)
     assert replenishment.status == ReplenishmentStatus.COMPLETED
-
-
-def test_completed_at_recorded() -> None:
-    replenishment = _start(_snack_machine())
-    completed_at = datetime(2026, 9, 7, 13, 0, tzinfo=UTC)
-    replenishment.complete(completed_at=completed_at)
     assert replenishment.completed_at == completed_at
+
+
+def test_rep_06_cancel() -> None:
+    machine, _ = _machine_with_slot()
+    replenishment = _start(machine)
+    replenishment.cancel()
+    assert replenishment.status == ReplenishmentStatus.CANCELLED
+
+
+def test_rep_07_08_immutable_after_terminal() -> None:
+    machine, slot = _machine_with_slot()
+    completed = _start(machine)
+    completed.complete(completed_at=datetime(2026, 9, 7, 13, 0, tzinfo=UTC))
+    with pytest.raises(InvalidReplenishmentStateError):
+        completed.add_line(
+            machine=machine,
+            slot=slot,
+            product_id=ProductId.new(),
+            quantity=1,
+            unit_price=Decimal("1500"),
+            occurred_at=datetime(2026, 9, 7, 13, 1, tzinfo=UTC),
+            product_description_snapshot="Cola",
+        )
+    cancelled = _start(machine)
+    cancelled.cancel()
+    with pytest.raises(InvalidReplenishmentStateError):
+        cancelled.add_line(
+            machine=machine,
+            slot=slot,
+            product_id=ProductId.new(),
+            quantity=1,
+            unit_price=Decimal("1500"),
+            occurred_at=datetime(2026, 9, 7, 13, 1, tzinfo=UTC),
+            product_description_snapshot="Cola",
+        )
+
+
+def test_inactive_machine_rejected() -> None:
+    machine, _ = _machine_with_slot()
+    machine.deactivate()
+    with pytest.raises(InactiveMachineError):
+        _start(machine)
+
+
+def test_cap_rules() -> None:
+    machine, slot = _machine_with_slot(capacity=5)
+    replenishment = _start(machine)
+    product = ProductId.new()
+    at = datetime(2026, 9, 7, 12, 5, tzinfo=UTC)
+    replenishment.add_line(
+        machine=machine,
+        slot=slot,
+        product_id=product,
+        quantity=5,
+        unit_price="1500",
+        occurred_at=at,
+        product_description_snapshot="Cola",
+    )
+    with pytest.raises(CapacityExceededError):
+        replenishment.add_line(
+            machine=machine,
+            slot=slot,
+            product_id=product,
+            quantity=6,
+            unit_price="1500",
+            occurred_at=at,
+            product_description_snapshot="Cola",
+        )
+    replenishment.add_line(
+        machine=machine,
+        slot=slot,
+        product_id=product,
+        quantity=-5,
+        unit_price="1500",
+        occurred_at=at,
+        product_description_snapshot="Cola",
+    )
+    with pytest.raises(CapacityExceededError):
+        replenishment.add_line(
+            machine=machine,
+            slot=slot,
+            product_id=product,
+            quantity=-6,
+            unit_price="1500",
+            occurred_at=at,
+            product_description_snapshot="Cola",
+        )
+    # CAP-06 multiple +5 valid independently
+    replenishment.add_line(
+        machine=machine,
+        slot=slot,
+        product_id=product,
+        quantity=5,
+        unit_price="1500",
+        occurred_at=at,
+        product_description_snapshot="Cola",
+    )
+    replenishment.add_line(
+        machine=machine,
+        slot=slot,
+        product_id=product,
+        quantity=5,
+        unit_price="1500",
+        occurred_at=at,
+        product_description_snapshot="Cola",
+    )
+
+
+def test_sub_same_price_keeps_preferred() -> None:
+    preferred = ProductId.new()
+    actual = ProductId.new()
+    machine, slot = _machine_with_slot(preferred=preferred, price=Decimal("1500"))
+    replenishment = _start(machine)
+    line = replenishment.add_line(
+        machine=machine,
+        slot=slot,
+        product_id=actual,
+        quantity=2,
+        unit_price=Decimal("1500"),
+        occurred_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
+        product_description_snapshot="Sprite",
+        replacement_reason=ReplacementReason.OUT_OF_STOCK,
+    )
+    assert line.preferred_product_id_snapshot == preferred
+    assert line.replacement_reason == ReplacementReason.OUT_OF_STOCK
+    assert slot.preferred_product_id == preferred
+
+
+def test_sub_price_mismatch_rejected() -> None:
+    preferred = ProductId.new()
+    machine, slot = _machine_with_slot(preferred=preferred, price=Decimal("1500"))
+    replenishment = _start(machine)
+    with pytest.raises(SubstitutionRejectedError):
+        replenishment.add_line(
+            machine=machine,
+            slot=slot,
+            product_id=ProductId.new(),
+            quantity=2,
+            unit_price=Decimal("1700"),
+            occurred_at=datetime(2026, 9, 7, 12, 5, tzinfo=UTC),
+            product_description_snapshot="Sprite",
+            replacement_reason=ReplacementReason.OPERATIONAL_DECISION,
+        )

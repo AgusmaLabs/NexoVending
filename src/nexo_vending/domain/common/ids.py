@@ -79,3 +79,57 @@ class InventoryMovementId:
     @classmethod
     def new(cls) -> InventoryMovementId:
         return cls(uuid4())
+
+
+@dataclass(frozen=True, slots=True)
+class ReplenishmentLineId:
+    value: UUID
+
+    @classmethod
+    def new(cls) -> ReplenishmentLineId:
+        return cls(uuid4())
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryCountId:
+    value: UUID
+
+    @classmethod
+    def new(cls) -> InventoryCountId:
+        return cls(uuid4())
+
+
+@dataclass(frozen=True, slots=True)
+class MachineInventoryPeriodId:
+    value: UUID
+
+    @classmethod
+    def new(cls) -> MachineInventoryPeriodId:
+        return cls(uuid4())
+
+
+@dataclass(frozen=True, slots=True)
+class SnackSaleId:
+    value: UUID
+
+    @classmethod
+    def new(cls) -> SnackSaleId:
+        return cls(uuid4())
+
+
+@dataclass(frozen=True, slots=True)
+class CoffeeSaleId:
+    value: UUID
+
+    @classmethod
+    def new(cls) -> CoffeeSaleId:
+        return cls(uuid4())
+
+
+@dataclass(frozen=True, slots=True)
+class SelectionId:
+    value: UUID
+
+    @classmethod
+    def new(cls) -> SelectionId:
+        return cls(uuid4())

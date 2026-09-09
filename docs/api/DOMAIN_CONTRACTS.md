@@ -6,9 +6,10 @@ Public-facing **domain/application contracts**. These are not HTTP APIs yet.
 
 ```python
 ProductRepository.get / save / find_by_barcode(tenant_id, barcode) / list_active(tenant_id)
-MachineRepository.get / find_by_code(tenant_id, code) / save / list_by_tenant(tenant_id)
+InventoryRepository.record_movement / list_movements_for_location / expected_quantity
+InventoryCountRepository.get / save
+MachineInventoryPeriodRepository.get_open / save
 ReplenishmentRepository.get / find_by_idempotency_key / save
-InventoryRepository.get_stock / record_movement / list_movements
 OperatorRepository.get / save / find_by_principal(tenant_id, principal)
 ```
 
@@ -16,7 +17,7 @@ OperatorRepository.get / save / find_by_principal(tenant_id, principal)
 
 ```python
 ProductLookup.find_by_barcode(tenant_id, barcode) -> Product | None
-InventoryAvailability.is_available(operator_id, product_id, quantity) -> bool
+InventoryAvailability.is_available(location, product_id, quantity) -> bool
 ```
 
 ## Application commands (catalog)
@@ -35,9 +36,12 @@ InventoryAvailability.is_available(operator_id, product_id, quantity) -> bool
 - `SetPreferredProduct` / `ClearPreferredProduct` / `SetSlotSellingPrice`
 - `GetMachine` / `FindMachineByCode` / `ListMachineSlots`
 
-## Application commands (replenishment)
+## Application commands (replenishment / inventory / sales)
 
-- `StartReplenishment` / `AddReplenishmentLine` / `CompleteReplenishment`
+- `StartReplenishment` / `AddReplenishmentLine` / `CompleteReplenishment` / `CancelReplenishment`
+- `RegisterInventoryMovement`
+- `CreateInventoryCount` / `RecordInventoryCountLine` / `CompleteInventoryCount`
+- `RegisterSnackSale` / `RegisterCoffeeSale`
 
 ## Status
 

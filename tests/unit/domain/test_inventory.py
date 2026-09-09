@@ -4,190 +4,196 @@ from datetime import UTC, datetime
 import pytest
 
 from nexo_vending.domain.common.errors import InsufficientStockError, InvalidQuantityError
-from nexo_vending.domain.common.ids import InventoryMovementId, ProductId, UserId
+from nexo_vending.domain.common.ids import (
+    InventoryMovementId,
+    MachineId,
+    ProductId,
+    SlotId,
+    UserId,
+)
 from nexo_vending.domain.common.value_objects import Quantity
+from nexo_vending.domain.inventory.custody import CustodyInventory
 from nexo_vending.domain.inventory.entities import InventoryMovement
-from nexo_vending.domain.inventory.enums import InventoryMovementType
+from nexo_vending.domain.inventory.enums import InventoryMovementType, InventoryReferenceType
 from nexo_vending.domain.inventory.ledger import InventoryLedger
+from nexo_vending.domain.inventory.locations import InventoryLocation
 
 
-def _movement(
+def _now() -> datetime:
+    return datetime(2026, 9, 7, 10, 0, tzinfo=UTC)
+
+
+def _move(
     *,
-    operator_id: UserId,
     product_id: ProductId,
-    movement_type: InventoryMovementType,
     quantity: int,
+    movement_type: InventoryMovementType,
+    actor: UserId,
+    source: InventoryLocation | None = None,
+    destination: InventoryLocation | None = None,
 ) -> InventoryMovement:
     return InventoryMovement(
         id=InventoryMovementId.new(),
-        operator_id=operator_id,
         product_id=product_id,
-        movement_type=movement_type,
         quantity=Quantity(quantity),
-        reference="test",
-        created_at=datetime(2026, 9, 7, 10, 0, tzinfo=UTC),
-        created_by=operator_id,
+        movement_type=movement_type,
+        reference_type=InventoryReferenceType.MANUAL,
+        reference_id="ref-1",
+        occurred_at=_now(),
+        actor_id=actor,
+        source_location=source,
+        destination_location=destination,
     )
 
 
-def test_assignment_increases_stock() -> None:
-    operator = UserId.new()
+def test_inv_assignment_and_balances() -> None:
+    admin = UserId.new()
+    replenisher = UserId.new()
     product = ProductId.new()
     movements = [
-        _movement(
-            operator_id=operator,
+        _move(
             product_id=product,
-            movement_type=InventoryMovementType.ASSIGNMENT,
-            quantity=10,
-        )
-    ]
-    assert InventoryLedger.stock_for(movements, operator_id=operator, product_id=product) == 10
-
-
-def test_replenishment_decreases_stock() -> None:
-    operator = UserId.new()
-    product = ProductId.new()
-    movements = [
-        _movement(
-            operator_id=operator,
-            product_id=product,
-            movement_type=InventoryMovementType.ASSIGNMENT,
-            quantity=10,
+            quantity=100,
+            movement_type=InventoryMovementType.ADJUSTMENT,
+            actor=admin,
+            destination=InventoryLocation.administrator(admin),
         ),
-        _movement(
-            operator_id=operator,
+        _move(
             product_id=product,
+            quantity=30,
+            movement_type=InventoryMovementType.ASSIGNMENT,
+            actor=admin,
+            source=InventoryLocation.administrator(admin),
+            destination=InventoryLocation.replenisher(replenisher),
+        ),
+    ]
+    assert CustodyInventory.administrator_expected(
+        movements, administrator_id=admin, product_id=product
+    ) == 70
+    assert CustodyInventory.replenisher_expected(
+        movements, replenisher_id=replenisher, product_id=product
+    ) == 30
+
+
+def test_inv_replenishment_slot_removal_return_loss() -> None:
+    admin = UserId.new()
+    replenisher = UserId.new()
+    product = ProductId.new()
+    machine = MachineId.new()
+    slot = SlotId.new()
+    machine_loc = InventoryLocation.machine_slot(machine, slot)
+    movements = [
+        _move(
+            product_id=product,
+            quantity=30,
+            movement_type=InventoryMovementType.ASSIGNMENT,
+            actor=admin,
+            source=InventoryLocation.administrator(admin),
+            destination=InventoryLocation.replenisher(replenisher),
+        ),
+        _move(
+            product_id=product,
+            quantity=10,
             movement_type=InventoryMovementType.REPLENISHMENT,
+            actor=replenisher,
+            source=InventoryLocation.replenisher(replenisher),
+            destination=machine_loc,
+        ),
+        _move(
+            product_id=product,
             quantity=3,
+            movement_type=InventoryMovementType.SLOT_REMOVAL,
+            actor=replenisher,
+            source=machine_loc,
+            destination=InventoryLocation.replenisher(replenisher),
         ),
-    ]
-    assert InventoryLedger.stock_for(movements, operator_id=operator, product_id=product) == 7
-
-
-def test_return_increases_stock() -> None:
-    operator = UserId.new()
-    product = ProductId.new()
-    movements = [
-        _movement(
-            operator_id=operator,
+        _move(
             product_id=product,
-            movement_type=InventoryMovementType.RETURN,
-            quantity=2,
-        )
-    ]
-    assert InventoryLedger.stock_for(movements, operator_id=operator, product_id=product) == 2
-
-
-def test_loss_decreases_stock() -> None:
-    operator = UserId.new()
-    product = ProductId.new()
-    movements = [
-        _movement(
-            operator_id=operator,
-            product_id=product,
-            movement_type=InventoryMovementType.ASSIGNMENT,
             quantity=5,
-        ),
-        _movement(
-            operator_id=operator,
-            product_id=product,
-            movement_type=InventoryMovementType.LOSS,
-            quantity=2,
-        ),
-    ]
-    assert InventoryLedger.stock_for(movements, operator_id=operator, product_id=product) == 3
-
-
-def test_adjustment() -> None:
-    operator = UserId.new()
-    product = ProductId.new()
-    movements = [
-        _movement(
-            operator_id=operator,
-            product_id=product,
-            movement_type=InventoryMovementType.ADJUSTMENT,
-            quantity=4,
-        )
-    ]
-    assert InventoryLedger.stock_for(movements, operator_id=operator, product_id=product) == 4
-
-
-def test_stock_calculation() -> None:
-    operator = UserId.new()
-    product = ProductId.new()
-    movements = [
-        _movement(
-            operator_id=operator,
-            product_id=product,
-            movement_type=InventoryMovementType.ASSIGNMENT,
-            quantity=10,
-        ),
-        _movement(
-            operator_id=operator,
-            product_id=product,
             movement_type=InventoryMovementType.RETURN,
-            quantity=2,
+            actor=replenisher,
+            source=InventoryLocation.replenisher(replenisher),
+            destination=InventoryLocation.administrator(admin),
         ),
-        _movement(
-            operator_id=operator,
+        _move(
             product_id=product,
-            movement_type=InventoryMovementType.ADJUSTMENT,
             quantity=1,
-        ),
-        _movement(
-            operator_id=operator,
-            product_id=product,
-            movement_type=InventoryMovementType.REPLENISHMENT,
-            quantity=5,
-        ),
-        _movement(
-            operator_id=operator,
-            product_id=product,
             movement_type=InventoryMovementType.LOSS,
-            quantity=1,
+            actor=replenisher,
+            source=InventoryLocation.replenisher(replenisher),
         ),
     ]
-    # 10 + 2 + 1 - 5 - 1 = 7
-    assert InventoryLedger.stock_for(movements, operator_id=operator, product_id=product) == 7
+    # replenisher: +30 -10 +3 -5 -1 = 17
+    assert CustodyInventory.replenisher_expected(
+        movements, replenisher_id=replenisher, product_id=product
+    ) == 17
+    assert InventoryLedger.is_slot_removal(movements[2])
+    assert not InventoryLedger.is_loss(movements[2])
+    assert InventoryLedger.is_loss(movements[4])
 
 
-def test_negative_stock_rejected() -> None:
-    operator = UserId.new()
+def test_inv_negative_stock_rejected() -> None:
+    replenisher = UserId.new()
     product = ProductId.new()
     existing = [
-        _movement(
-            operator_id=operator,
+        _move(
             product_id=product,
-            movement_type=InventoryMovementType.ASSIGNMENT,
             quantity=2,
+            movement_type=InventoryMovementType.ASSIGNMENT,
+            actor=replenisher,
+            destination=InventoryLocation.replenisher(replenisher),
         )
     ]
-    depleting = _movement(
-        operator_id=operator,
+    depleting = _move(
         product_id=product,
-        movement_type=InventoryMovementType.REPLENISHMENT,
         quantity=3,
+        movement_type=InventoryMovementType.REPLENISHMENT,
+        actor=replenisher,
+        source=InventoryLocation.replenisher(replenisher),
+        destination=InventoryLocation.machine_slot(MachineId.new(), SlotId.new()),
     )
     with pytest.raises(InsufficientStockError):
         InventoryLedger.ensure_can_apply(existing, depleting)
 
 
-def test_inventory_movement_is_immutable() -> None:
-    movement = _movement(
-        operator_id=UserId.new(),
+def test_inv_immutable_and_positive_qty() -> None:
+    movement = _move(
         product_id=ProductId.new(),
-        movement_type=InventoryMovementType.ASSIGNMENT,
         quantity=1,
+        movement_type=InventoryMovementType.ADJUSTMENT,
+        actor=UserId.new(),
+        destination=InventoryLocation.administrator(UserId.new()),
     )
     with pytest.raises(FrozenInstanceError):
         movement.quantity = Quantity(2)  # type: ignore[misc]
-
-
-def test_movement_quantity_must_be_positive() -> None:
     with pytest.raises(InvalidQuantityError):
-        _movement(
-            operator_id=UserId.new(),
-            product_id=ProductId.new(),
+        Quantity(0)
+
+
+def test_custody_transfer_conserves_total() -> None:
+    admin = UserId.new()
+    replenisher = UserId.new()
+    product = ProductId.new()
+    movements = [
+        _move(
+            product_id=product,
+            quantity=40,
+            movement_type=InventoryMovementType.ADJUSTMENT,
+            actor=admin,
+            destination=InventoryLocation.administrator(admin),
+        ),
+        _move(
+            product_id=product,
+            quantity=15,
             movement_type=InventoryMovementType.ASSIGNMENT,
-            quantity=0,
-        )
+            actor=admin,
+            source=InventoryLocation.administrator(admin),
+            destination=InventoryLocation.replenisher(replenisher),
+        ),
+    ]
+    total = CustodyInventory.administrator_expected(
+        movements, administrator_id=admin, product_id=product
+    ) + CustodyInventory.replenisher_expected(
+        movements, replenisher_id=replenisher, product_id=product
+    )
+    assert total == 40

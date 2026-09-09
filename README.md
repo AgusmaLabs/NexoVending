@@ -26,6 +26,8 @@ NexoPlatform **no** depende de NexoVending.
 
 **V05** — Machine & physical slot configuration (SNACK/COFFEE/MIXED, capacity, preferred product, selling price).
 
+**V06** — Inventory custody ledger, replenishment signed lines, machine periods, snack/coffee consumption (domain).
+
 **Todavía no** incluye persistencia de dominio, API REST de negocio ni scanner hardware.
 
 ## Requisitos

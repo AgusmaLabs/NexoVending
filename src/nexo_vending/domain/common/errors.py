@@ -47,3 +47,27 @@ class InsufficientStockError(DomainError):
 
 class NaiveDateTimeError(DomainError):
     pass
+
+
+class CapacityExceededError(DomainError):
+    pass
+
+
+class SubstitutionRejectedError(DomainError):
+    pass
+
+
+class InvalidInventoryCountError(DomainError):
+    pass
+
+
+class InvalidMachineInventoryError(DomainError):
+    pass
+
+
+class InvalidSaleError(DomainError):
+    pass
+
+
+class InvalidRecipeError(DomainError):
+    pass

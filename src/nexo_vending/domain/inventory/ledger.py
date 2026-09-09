@@ -3,46 +3,40 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from nexo_vending.domain.common.errors import InsufficientStockError
-from nexo_vending.domain.common.ids import ProductId, UserId
+from nexo_vending.domain.common.ids import ProductId
 from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.enums import InventoryMovementType
-
-_INCREASE = {
-    InventoryMovementType.ASSIGNMENT,
-    InventoryMovementType.RETURN,
-    InventoryMovementType.ADJUSTMENT,
-}
-_DECREASE = {
-    InventoryMovementType.REPLENISHMENT,
-    InventoryMovementType.LOSS,
-}
+from nexo_vending.domain.inventory.locations import InventoryLocation
 
 
 class InventoryLedger:
-    """Derives operator/product stock from an immutable movement history."""
+    """Derives expected inventory from an immutable location-based movement history."""
 
     @staticmethod
-    def signed_delta(movement: InventoryMovement) -> int:
-        amount = movement.quantity.value
-        if movement.movement_type in _INCREASE:
-            return amount
-        if movement.movement_type in _DECREASE:
-            return -amount
-        raise ValueError(f"unsupported movement type: {movement.movement_type}")
+    def signed_delta_for_location(
+        movement: InventoryMovement,
+        location: InventoryLocation,
+    ) -> int:
+        delta = 0
+        if movement.destination_location == location:
+            delta += movement.quantity.value
+        if movement.source_location == location:
+            delta -= movement.quantity.value
+        return delta
 
     @classmethod
-    def stock_for(
+    def expected_quantity(
         cls,
         movements: Iterable[InventoryMovement],
         *,
-        operator_id: UserId,
+        location: InventoryLocation,
         product_id: ProductId,
     ) -> int:
         total = 0
         for movement in movements:
-            if movement.operator_id != operator_id or movement.product_id != product_id:
+            if movement.product_id != product_id:
                 continue
-            total += cls.signed_delta(movement)
+            total += cls.signed_delta_for_location(movement, location)
         return total
 
     @classmethod
@@ -50,16 +44,24 @@ class InventoryLedger:
         cls,
         movements: Iterable[InventoryMovement],
         new_movement: InventoryMovement,
-    ) -> int:
-        """Return resulting stock or raise if the movement would go negative."""
-        current = cls.stock_for(
-            movements,
-            operator_id=new_movement.operator_id,
-            product_id=new_movement.product_id,
-        )
-        resulting = current + cls.signed_delta(new_movement)
-        if resulting < 0:
-            raise InsufficientStockError(
-                "inventory movement would result in negative stock"
+    ) -> None:
+        """Reject movements that would drive any touched source location negative."""
+        known = list(movements)
+        if new_movement.source_location is not None:
+            current = cls.expected_quantity(
+                known,
+                location=new_movement.source_location,
+                product_id=new_movement.product_id,
             )
-        return resulting
+            if current - new_movement.quantity.value < 0:
+                raise InsufficientStockError(
+                    "inventory movement would result in negative stock at source"
+                )
+
+    @classmethod
+    def is_loss(cls, movement: InventoryMovement) -> bool:
+        return movement.movement_type == InventoryMovementType.LOSS
+
+    @classmethod
+    def is_slot_removal(cls, movement: InventoryMovement) -> bool:
+        return movement.movement_type == InventoryMovementType.SLOT_REMOVAL
