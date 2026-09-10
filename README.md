@@ -7,7 +7,7 @@ Producto de negocio para operar máquinas vending. Consume **nexo-platform** com
 ```text
 nexo-vending
       │
-      ├──────────────→ nexo-platform   (pip: nexo-platform==1.0.0)
+      ├──────────────→ nexo-platform   (pip: nexo-platform==1.7.0)
       │
       └──────────────→ PostgreSQL      (schema propio de Vending)
 ```
@@ -20,7 +20,7 @@ NexoPlatform **no** depende de NexoVending.
 
 **V02** — domain foundation (Product, Machine, Inventory ledger, Replenishment aggregate, ports, use cases in-memory).
 
-**V03** — tenant-scoped Operator identity & authorization on Platform auth (`nexo-platform==1.2.0`).
+**V03** — tenant-scoped Operator identity & authorization on Platform auth (`nexo-platform==1.7.0`).
 
 **V04** — tenant-scoped Product catalog (barcode, lifecycle, lookup).
 
@@ -34,7 +34,7 @@ NexoPlatform **no** depende de NexoVending.
 
 - Python 3.12+
 - Docker (para Compose / Testcontainers)
-- Acceso al repositorio/wheel de `nexo-platform==1.0.0` (aún no publicado en PyPI público)
+- Acceso al repositorio/wheel de `nexo-platform==1.7.0` (aún no publicado en PyPI público)
 
 ## Instalación (desarrollo)
 

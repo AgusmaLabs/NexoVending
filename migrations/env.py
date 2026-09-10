@@ -11,6 +11,8 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from nexo_vending.config import settings
+from nexo_vending.infrastructure.persistence import models as _models  # noqa: F401
+from nexo_vending.infrastructure.persistence.base import Base
 
 config = context.config
 if config.config_file_name is not None:
@@ -20,7 +22,7 @@ configured_url = (config.get_main_option("sqlalchemy.url") or "").strip() or Non
 database_url = configured_url or settings.database_url
 config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

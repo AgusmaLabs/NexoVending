@@ -28,6 +28,7 @@ from nexo_vending.domain.machines.value_objects import SellingPrice
 from nexo_vending.domain.products.entities import Product
 from nexo_vending.domain.replenishment.enums import ReplenishmentStatus
 from tests.support.fakes import (
+    InMemoryInventoryRepository,
     InMemoryMachineRepository,
     InMemoryProductLookup,
     InMemoryProductRepository,
@@ -74,6 +75,7 @@ async def _test_add_line_complete_and_cancel_flow() -> None:
     products = InMemoryProductRepository()
     machines = InMemoryMachineRepository()
     replenishments = InMemoryReplenishmentRepository()
+    inventory = InMemoryInventoryRepository()
     tenant_id = TenantId("tenant-a")
     product = Product.create(
         product_id=ProductId.new(),
@@ -98,9 +100,35 @@ async def _test_add_line_complete_and_cancel_flow() -> None:
     )
     await machines.save(machine)
 
+    operator_id = UserId.new()
+    # Seed replenisher stock so completion can debit inventory.
+    from nexo_vending.domain.common.ids import InventoryMovementId
+    from nexo_vending.domain.common.value_objects import Quantity
+    from nexo_vending.domain.inventory.entities import InventoryMovement
+    from nexo_vending.domain.inventory.enums import (
+        InventoryMovementType,
+        InventoryReferenceType,
+    )
+    from nexo_vending.domain.inventory.locations import InventoryLocation
+
+    await inventory.record_movement(
+        InventoryMovement(
+            id=InventoryMovementId.new(),
+            tenant_id=tenant_id,
+            product_id=product.id,
+            quantity=Quantity(10),
+            movement_type=InventoryMovementType.ASSIGNMENT,
+            reference_type=InventoryReferenceType.ASSIGNMENT,
+            reference_id="seed",
+            occurred_at=datetime(2026, 9, 7, 11, 0, tzinfo=UTC),
+            actor_id=operator_id,
+            destination_location=InventoryLocation.replenisher(operator_id),
+        )
+    )
+
     started = await StartReplenishment(machines, replenishments).execute(
         StartReplenishmentCommand(
-            operator_id=UserId.new(),
+            operator_id=operator_id,
             machine_id=machine.id,
             started_at=datetime(2026, 9, 7, 12, 0, tzinfo=UTC),
             location=GeoLocation(latitude=-33.0, longitude=-70.0, accuracy=2.0),
@@ -127,7 +155,7 @@ async def _test_add_line_complete_and_cancel_flow() -> None:
     assert updated.lines[0].product_id == product.id
     assert updated.lines[0].product_description_snapshot == "Agua"
 
-    completed = await CompleteReplenishment(replenishments).execute(
+    completed = await CompleteReplenishment(replenishments, inventory).execute(
         CompleteReplenishmentCommand(
             replenishment_id=started.id,
             completed_at=datetime(2026, 9, 7, 12, 30, tzinfo=UTC),
@@ -135,11 +163,22 @@ async def _test_add_line_complete_and_cancel_flow() -> None:
     )
     assert completed.status == ReplenishmentStatus.COMPLETED
     assert completed.completed_at is not None
+    assert (
+        await inventory.expected_quantity(InventoryLocation.replenisher(operator_id), product.id)
+        == 7
+    )
+    assert (
+        await inventory.expected_quantity(
+            InventoryLocation.machine_slot(machine.id, slot.id),
+            product.id,
+        )
+        == 3
+    )
 
     # Separate visit for cancel path
     other = await StartReplenishment(machines, replenishments).execute(
         StartReplenishmentCommand(
-            operator_id=UserId.new(),
+            operator_id=operator_id,
             machine_id=machine.id,
             started_at=datetime(2026, 9, 7, 14, 0, tzinfo=UTC),
             location=GeoLocation(latitude=-33.0, longitude=-70.0, accuracy=2.0),

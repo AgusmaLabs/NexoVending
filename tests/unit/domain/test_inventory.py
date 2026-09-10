@@ -9,6 +9,7 @@ from nexo_vending.domain.common.ids import (
     MachineId,
     ProductId,
     SlotId,
+    TenantId,
     UserId,
 )
 from nexo_vending.domain.common.value_objects import Quantity
@@ -34,6 +35,7 @@ def _move(
 ) -> InventoryMovement:
     return InventoryMovement(
         id=InventoryMovementId.new(),
+        tenant_id=TenantId("tenant-a"),
         product_id=product_id,
         quantity=Quantity(quantity),
         movement_type=movement_type,

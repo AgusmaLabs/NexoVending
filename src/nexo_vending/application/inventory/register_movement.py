@@ -6,6 +6,7 @@ from datetime import datetime
 from nexo_vending.domain.common.ids import (
     InventoryMovementId,
     ProductId,
+    TenantId,
     UserId,
 )
 from nexo_vending.domain.common.value_objects import Quantity
@@ -17,6 +18,7 @@ from nexo_vending.domain.inventory.repositories import InventoryRepository
 
 @dataclass(frozen=True, slots=True)
 class RegisterInventoryMovementCommand:
+    tenant_id: TenantId
     product_id: ProductId
     quantity: int
     movement_type: InventoryMovementType
@@ -26,6 +28,7 @@ class RegisterInventoryMovementCommand:
     actor_id: UserId
     source_location: InventoryLocation | None = None
     destination_location: InventoryLocation | None = None
+    idempotency_key: str | None = None
 
 
 class RegisterInventoryMovement:
@@ -33,8 +36,16 @@ class RegisterInventoryMovement:
         self._inventory = inventory
 
     async def execute(self, command: RegisterInventoryMovementCommand) -> InventoryMovement:
+        if command.idempotency_key:
+            existing = await self._inventory.find_by_idempotency_key(
+                command.tenant_id,
+                command.idempotency_key,
+            )
+            if existing is not None:
+                return existing
         movement = InventoryMovement(
             id=InventoryMovementId.new(),
+            tenant_id=command.tenant_id,
             product_id=command.product_id,
             quantity=Quantity(command.quantity),
             movement_type=command.movement_type,
@@ -44,6 +55,7 @@ class RegisterInventoryMovement:
             actor_id=command.actor_id,
             source_location=command.source_location,
             destination_location=command.destination_location,
+            idempotency_key=command.idempotency_key,
         )
         await self._inventory.record_movement(movement)
         return movement

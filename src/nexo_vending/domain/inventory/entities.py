@@ -8,6 +8,7 @@ from nexo_vending.domain.common.ids import (
     InventoryCountId,
     InventoryMovementId,
     ProductId,
+    TenantId,
     UserId,
 )
 from nexo_vending.domain.common.value_objects import Quantity, require_aware
@@ -24,6 +25,7 @@ class InventoryMovement:
     """Immutable custody transfer / adjustment. Stock is derived from the ledger."""
 
     id: InventoryMovementId
+    tenant_id: TenantId
     product_id: ProductId
     quantity: Quantity
     movement_type: InventoryMovementType
@@ -33,13 +35,20 @@ class InventoryMovement:
     actor_id: UserId
     source_location: InventoryLocation | None = None
     destination_location: InventoryLocation | None = None
+    idempotency_key: str | None = None
 
     def __post_init__(self) -> None:
         require_aware(self.occurred_at, field_name="occurred_at")
+        if not isinstance(self.tenant_id, TenantId):
+            raise ValueError("tenant_id is required")
         ref = self.reference_id.strip()
         if not ref:
             raise ValueError("reference_id is required")
         object.__setattr__(self, "reference_id", ref)
+        key = self.idempotency_key.strip() if self.idempotency_key else None
+        if key == "":
+            key = None
+        object.__setattr__(self, "idempotency_key", key)
         if self.source_location is None and self.destination_location is None:
             raise ValueError("movement requires source and/or destination location")
         if self.movement_type == InventoryMovementType.LOSS and self.destination_location is not None:

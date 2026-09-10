@@ -16,6 +16,8 @@ def test_vending_may_depend_on_platform() -> None:
     assert nexo_vending.__version__
     assert nexo_platform.Tenant is not None
     assert nexo_platform.UnitOfWork is not None
+    assert nexo_platform.TransactionalUnitOfWork is not None
+    assert nexo_platform.Database is not None
     assert nexo_platform.DomainEvent is not None
 
 

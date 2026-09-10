@@ -15,7 +15,7 @@ from nexo_vending.application.inventory.register_movement import (
     RegisterInventoryMovement,
     RegisterInventoryMovementCommand,
 )
-from nexo_vending.domain.common.ids import ProductId, UserId
+from nexo_vending.domain.common.ids import ProductId, TenantId, UserId
 from nexo_vending.domain.inventory.enums import (
     InventoryCountStatus,
     InventoryMovementType,
@@ -38,6 +38,7 @@ async def _test_register_movement_and_count_without_auto_loss() -> None:
 
     await RegisterInventoryMovement(inventory).execute(
         RegisterInventoryMovementCommand(
+            tenant_id=TenantId("tenant-a"),
             product_id=product,
             quantity=10,
             movement_type=InventoryMovementType.ADJUSTMENT,

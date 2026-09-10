@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from nexo_vending.domain.common.ids import InventoryCountId, ProductId
+from nexo_vending.domain.common.ids import InventoryCountId, ProductId, TenantId
 from nexo_vending.domain.inventory.entities import InventoryCount, InventoryMovement
 from nexo_vending.domain.inventory.locations import InventoryLocation
 from nexo_vending.domain.inventory.periods import MachineInventoryPeriod
@@ -10,6 +10,12 @@ from nexo_vending.domain.inventory.periods import MachineInventoryPeriod
 
 class InventoryRepository(Protocol):
     async def record_movement(self, movement: InventoryMovement) -> None: ...
+
+    async def find_by_idempotency_key(
+        self,
+        tenant_id: TenantId,
+        idempotency_key: str,
+    ) -> InventoryMovement | None: ...
 
     async def list_movements_for_location(
         self,

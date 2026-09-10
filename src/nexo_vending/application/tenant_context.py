@@ -1,13 +1,12 @@
-"""Tenant/request context propagation using Platform's public RequestContext."""
+"""Tenant/request context propagation using Platform public APIs."""
 
 from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
-from uuid import UUID
 
-from nexo_platform.tenant import RequestContext
+from nexo_platform.tenant import RequestContext, TenantContext
 
 _current_context: ContextVar[RequestContext | None] = ContextVar(
     "nexo_vending_request_context",
@@ -26,8 +25,14 @@ def require_request_context() -> RequestContext:
     return context
 
 
-def get_tenant_id() -> str | UUID:
-    return require_request_context().tenant_id
+def get_tenant_context() -> TenantContext:
+    """Trusted tenant view for the bound RequestContext (Platform TenantContext)."""
+    return TenantContext.from_request(require_request_context())
+
+
+def get_tenant_id() -> str:
+    """String tenant id for filters; authority from RequestContext via TenantContext."""
+    return get_tenant_context().require_tenant_id()
 
 
 @contextmanager

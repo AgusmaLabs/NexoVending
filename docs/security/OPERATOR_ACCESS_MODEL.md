@@ -17,7 +17,7 @@ Validity interval is half-open: `[valid_from, valid_until)`.
 
 | Concern | Owner |
 | --- | --- |
-| Authentication | Platform (`nexo-platform==1.2.0`) |
+| Authentication | Platform (`nexo-platform==1.7.0`) |
 | Identity binding (Principal → Operator) | Vending |
 | Authorization (status/role/validity) | Vending |
 | Tenant authority | Platform `RequestContext` |

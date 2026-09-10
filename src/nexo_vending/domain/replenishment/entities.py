@@ -15,6 +15,7 @@ from nexo_vending.domain.common.ids import (
     ReplenishmentId,
     ReplenishmentLineId,
     SlotId,
+    TenantId,
     UserId,
 )
 from nexo_vending.domain.common.value_objects import (
@@ -70,6 +71,7 @@ class Replenishment:
     """Aggregate root for a replenishment visit."""
 
     id: ReplenishmentId
+    tenant_id: TenantId
     operator_id: UserId
     machine_id: MachineId
     machine_type: MachineType
@@ -78,14 +80,19 @@ class Replenishment:
     idempotency_key: str
     status: ReplenishmentStatus = ReplenishmentStatus.IN_PROGRESS
     completed_at: datetime | None = None
+    version: int = 1
     _lines: list[ReplenishmentLine] = field(default_factory=list, repr=False)
 
     def __post_init__(self) -> None:
         require_aware(self.started_at, field_name="started_at")
+        if not isinstance(self.tenant_id, TenantId):
+            raise InvalidReplenishmentStateError("tenant_id is required")
         key = self.idempotency_key.strip()
         if not key:
             raise InvalidReplenishmentStateError("idempotency_key is required")
         self.idempotency_key = key
+        if self.version < 1:
+            raise InvalidReplenishmentStateError("version must be >= 1")
 
     @property
     def lines(self) -> tuple[ReplenishmentLine, ...]:
@@ -107,6 +114,7 @@ class Replenishment:
         machine.ensure_can_start_replenishment()
         return cls(
             id=replenishment_id,
+            tenant_id=machine.tenant_id,
             operator_id=operator_id,
             machine_id=machine.id,
             machine_type=machine.type,
@@ -114,6 +122,7 @@ class Replenishment:
             location=location,
             idempotency_key=idempotency_key,
             status=ReplenishmentStatus.IN_PROGRESS,
+            version=1,
         )
 
     def _ensure_in_progress(self) -> None:

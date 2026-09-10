@@ -20,16 +20,18 @@ FORBIDDEN_COPIED_PATHS = (
     ROOT / "modules" / "identity",
 )
 
-# Public Platform surface allowed in Vending source.
+# Public Platform surface allowed in Vending source (nexo-platform 1.7.0+).
 ALLOWED_PLATFORM_PREFIXES = (
     "nexo_platform",
     "nexo_platform.authorization",
     "nexo_platform.billing",
+    "nexo_platform.context",
     "nexo_platform.entitlement",
     "nexo_platform.events",
     "nexo_platform.identity",
     "nexo_platform.identity.authentication",
     "nexo_platform.outbox",
+    "nexo_platform.persistence",
     "nexo_platform.shared",
     "nexo_platform.tenant",
     "nexo_platform.transaction",
@@ -39,7 +41,10 @@ ALLOWED_PLATFORM_PREFIXES = (
 FORBIDDEN_PLATFORM_PREFIXES = (
     "nexo_platform.infrastructure",
     "nexo_platform.modules",
-    "nexo_platform.persistence",
+    # Public: nexo_platform.persistence (Database, SessionFactory).
+    # Private: module internals and SQLAlchemy adapters.
+    "nexo_platform.persistence.database",
+    "nexo_platform.persistence.sqlalchemy",
     "nexo_platform.identity.infrastructure",
     "nexo_platform.tenant.infrastructure",
     "nexo_platform.billing.infrastructure",

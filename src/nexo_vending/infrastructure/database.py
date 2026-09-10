@@ -1,39 +1,39 @@
-"""Vending-owned SQLAlchemy engine and session factory.
+"""Vending composition helpers around Platform public persistence.
 
-Vending does not import Platform ORM models or Platform persistence internals.
+Uses ``nexo_platform.persistence.Database`` / ``SessionFactory``.
+Does not import Platform ORM ``Base`` or private ``persistence.database`` symbols.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
 
-from sqlalchemy import create_engine
+from nexo_platform.persistence import Database, SessionFactory
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from nexo_vending.config import settings
 
-_engine: Engine | None = None
-_session_factory: sessionmaker[Session] | None = None
+_db: Database | None = None
+
+
+def get_database() -> Database:
+    global _db
+    if _db is None:
+        _db = Database.from_url(settings.database_url)
+    return _db
 
 
 def get_engine() -> Engine:
-    global _engine, _session_factory
-    if _engine is None:
-        _engine = create_engine(settings.database_url, pool_pre_ping=True)
-        _session_factory = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
-    return _engine
+    return get_database().engine
 
 
-def get_session_factory() -> sessionmaker[Session]:
-    get_engine()
-    assert _session_factory is not None
-    return _session_factory
+def get_session_factory() -> SessionFactory:
+    return get_database().session_factory()
 
 
 def session_scope() -> Iterator[Session]:
-    factory = get_session_factory()
-    session = factory()
+    session = get_session_factory()()
     try:
         yield session
         session.commit()
@@ -45,9 +45,8 @@ def session_scope() -> Iterator[Session]:
 
 
 def reset_engine() -> None:
-    """Dispose the cached engine (tests / config reload)."""
-    global _engine, _session_factory
-    if _engine is not None:
-        _engine.dispose()
-    _engine = None
-    _session_factory = None
+    """Dispose the cached Database (tests / config reload)."""
+    global _db
+    if _db is not None:
+        _db.dispose()
+    _db = None

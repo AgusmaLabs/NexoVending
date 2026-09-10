@@ -10,6 +10,10 @@ Domain-focused documents in this folder:
 | [PRODUCT_CATALOG.md](PRODUCT_CATALOG.md) | Product catalog model |
 | [MACHINE_MANAGEMENT.md](MACHINE_MANAGEMENT.md) | Machine & slot configuration |
 | [INVENTORY_AND_REPLENISHMENT.md](INVENTORY_AND_REPLENISHMENT.md) | Inventory, replenishment, sales |
+| [PLATFORM_INTEGRATION.md](PLATFORM_INTEGRATION.md) | Platform DB / Session / UoW / tenant (aligned to 1.7.0) |
+| [TRANSACTION_BOUNDARY.md](TRANSACTION_BOUNDARY.md) | How Vending uses Platform UoW |
+| [../domain/INVENTORY_RULES.md](../domain/INVENTORY_RULES.md) | Inventory ledger rules |
+| [../domain/REPLENISHMENT_RULES.md](../domain/REPLENISHMENT_RULES.md) | Replenishment rules |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | Layer and module dependency rules |
 | [../api/DOMAIN_CONTRACTS.md](../api/DOMAIN_CONTRACTS.md) | Repository / use-case contracts |
 | [../adr/](../adr/) | Architecture decision records |

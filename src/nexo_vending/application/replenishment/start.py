@@ -30,15 +30,16 @@ class StartReplenishment:
         self._replenishments = replenishments
 
     async def execute(self, command: StartReplenishmentCommand) -> Replenishment:
-        existing = await self._replenishments.find_by_idempotency_key(
-            command.idempotency_key
-        )
-        if existing is not None:
-            return existing
-
         machine = await self._machines.get(command.machine_id)
         if machine is None:
             raise DomainError("machine not found")
+
+        existing = await self._replenishments.find_by_idempotency_key(
+            machine.tenant_id,
+            command.idempotency_key,
+        )
+        if existing is not None:
+            return existing
 
         replenishment = Replenishment.start(
             replenishment_id=ReplenishmentId.new(),

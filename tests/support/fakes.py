@@ -92,22 +92,29 @@ class InMemoryMachineRepository:
 class InMemoryReplenishmentRepository:
     def __init__(self) -> None:
         self._by_id: dict[ReplenishmentId, Replenishment] = {}
-        self._by_key: dict[str, Replenishment] = {}
+        self._by_key: dict[tuple[str, str], Replenishment] = {}
 
     async def get(self, replenishment_id: ReplenishmentId) -> Replenishment | None:
         return self._by_id.get(replenishment_id)
 
-    async def find_by_idempotency_key(self, idempotency_key: str) -> Replenishment | None:
-        return self._by_key.get(idempotency_key.strip())
+    async def find_by_idempotency_key(
+        self,
+        tenant_id: TenantId,
+        idempotency_key: str,
+    ) -> Replenishment | None:
+        return self._by_key.get((tenant_id.value, idempotency_key.strip()))
 
     async def save(self, replenishment: Replenishment) -> None:
         self._by_id[replenishment.id] = replenishment
-        self._by_key[replenishment.idempotency_key] = replenishment
+        self._by_key[(replenishment.tenant_id.value, replenishment.idempotency_key)] = (
+            replenishment
+        )
 
 
 class InMemoryInventoryRepository:
     def __init__(self) -> None:
         self._movements: list[InventoryMovement] = []
+        self._by_key: dict[tuple[str, str], InventoryMovement] = {}
 
     async def list_movements_for_location(
         self,
@@ -136,9 +143,25 @@ class InMemoryInventoryRepository:
             product_id=product_id,
         )
 
+    async def find_by_idempotency_key(
+        self,
+        tenant_id: TenantId,
+        idempotency_key: str,
+    ) -> InventoryMovement | None:
+        return self._by_key.get((tenant_id.value, idempotency_key.strip()))
+
     async def record_movement(self, movement: InventoryMovement) -> None:
+        if movement.idempotency_key is not None:
+            existing = await self.find_by_idempotency_key(
+                movement.tenant_id,
+                movement.idempotency_key,
+            )
+            if existing is not None:
+                return
         InventoryLedger.ensure_can_apply(self._movements, movement)
         self._movements.append(movement)
+        if movement.idempotency_key is not None:
+            self._by_key[(movement.tenant_id.value, movement.idempotency_key)] = movement
 
     async def list_all(self) -> list[InventoryMovement]:
         return list(self._movements)

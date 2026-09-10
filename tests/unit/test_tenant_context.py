@@ -6,6 +6,7 @@ from nexo_platform.tenant import RequestContext
 from nexo_vending.application.tenant_context import (
     bind_request_context,
     get_request_context,
+    get_tenant_context,
     get_tenant_id,
 )
 
@@ -28,6 +29,7 @@ def test_request_context_does_not_leak_across_bindings() -> None:
 
     with bind_request_context(ctx_a):
         assert get_tenant_id() == tenant_a
+        assert get_tenant_context().require_tenant_id() == tenant_a
         with bind_request_context(ctx_b):
             assert get_tenant_id() == tenant_b
         assert get_tenant_id() == tenant_a

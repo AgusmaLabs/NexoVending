@@ -1,6 +1,8 @@
 # Inventory & Replenishment — NexoVending
 
-Status: **Implemented** (domain + application). Persistence / Platform DB integration **planned**.
+Status: **Implemented** (domain + application + PostgreSQL persistence V8).
+
+See [PLATFORM_INTEGRATION.md](PLATFORM_INTEGRATION.md), [TRANSACTION_BOUNDARY.md](TRANSACTION_BOUNDARY.md), [ADR-026](../adr/ADR-026-platform-persistence-integration.md), [ADR-027](../adr/ADR-027-transactional-replenishment-completion.md).
 
 ## Physical flow
 
@@ -28,3 +30,5 @@ Purchase → Administrator → Assignment → Replenisher
 - `application.inventory` / `application.replenishment` / `application.sales`
 
 Domain does **not** import Platform, FastAPI, or SQLAlchemy.
+
+Vending does not introduce a product-local UnitOfWork; V8 adapters share the Session from Platform `SqlAlchemyTransactionalUnitOfWork`.
