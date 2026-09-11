@@ -2,7 +2,7 @@
 
 Status: **Implemented** (V9).
 
-Base path: `/inventory`
+API prefix: `/api/v1`. Base path below: `/inventory` → full path `/api/v1/inventory/...`.
 
 | Method | Path | Permission | Entitlement |
 | --- | --- | --- | --- |

@@ -50,5 +50,5 @@ InventoryAvailability.is_available(location, product_id, quantity) -> bool
 | Domain entities / VOs / errors | Implemented |
 | Repository / service Protocols | Implemented |
 | In-memory fakes (tests) | Implemented |
-| PostgreSQL adapters | Planned |
-| HTTP / mobile adapters | Planned |
+| PostgreSQL adapters | Implemented (V8) |
+| HTTP / mobile adapters | Implemented (V9–V10) — see [MOBILE_API_CONTRACT.md](MOBILE_API_CONTRACT.md) |

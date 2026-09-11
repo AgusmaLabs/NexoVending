@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from tests.api.conftest import replenisher_headers
+from tests.api.conftest import api, replenisher_headers
 
 
 def test_complete_rollback_on_forced_failure(api_world) -> None:
     client = api_world["client"]
     created = client.post(
-        "/replenishments",
+        api("/replenishments"),
         headers=replenisher_headers(api_world, key="rb-create"),
         json={
             "machine_id": api_world["machine_id"],
@@ -19,7 +19,7 @@ def test_complete_rollback_on_forced_failure(api_world) -> None:
     ).json()
     rid = created["id"]
     client.post(
-        f"/replenishments/{rid}/lines",
+        api(f"/replenishments/{rid}/lines"),
         headers=replenisher_headers(api_world, key="rb-line"),
         json={
             "slot_id": api_world["slot_id"],
@@ -38,13 +38,13 @@ def test_complete_rollback_on_forced_failure(api_world) -> None:
 
     with patch.object(CompleteReplenishment, "execute", boom):
         response = client.post(
-            f"/replenishments/{rid}/complete",
+            api(f"/replenishments/{rid}/complete"),
             headers=replenisher_headers(api_world, key="rb-complete"),
             json={},
         )
     assert response.status_code == 500
 
-    got = client.get(f"/replenishments/{rid}", headers=replenisher_headers(api_world))
+    got = client.get(api(f"/replenishments/{rid}"), headers=replenisher_headers(api_world))
     assert got.status_code == 200
     assert got.json()["status"] == "IN_PROGRESS"
 
@@ -52,7 +52,7 @@ def test_complete_rollback_on_forced_failure(api_world) -> None:
 def test_concurrent_complete_respects_locking(api_world) -> None:
     client = api_world["client"]
     created = client.post(
-        "/replenishments",
+        api("/replenishments"),
         headers=replenisher_headers(api_world, key="cc-create"),
         json={
             "machine_id": api_world["machine_id"],
@@ -61,7 +61,7 @@ def test_concurrent_complete_respects_locking(api_world) -> None:
     ).json()
     rid = created["id"]
     client.post(
-        f"/replenishments/{rid}/lines",
+        api(f"/replenishments/{rid}/lines"),
         headers=replenisher_headers(api_world, key="cc-line"),
         json={
             "slot_id": api_world["slot_id"],
@@ -71,16 +71,16 @@ def test_concurrent_complete_respects_locking(api_world) -> None:
     )
 
     first = client.post(
-        f"/replenishments/{rid}/complete",
+        api(f"/replenishments/{rid}/complete"),
         headers=replenisher_headers(api_world, key="cc-a"),
         json={},
     )
     second = client.post(
-        f"/replenishments/{rid}/complete",
+        api(f"/replenishments/{rid}/complete"),
         headers=replenisher_headers(api_world, key="cc-b"),
         json={},
     )
     assert first.status_code == 200
     assert second.status_code == 200
-    final = client.get(f"/replenishments/{rid}", headers=replenisher_headers(api_world))
+    final = client.get(api(f"/replenishments/{rid}"), headers=replenisher_headers(api_world))
     assert final.json()["status"] == "COMPLETED"

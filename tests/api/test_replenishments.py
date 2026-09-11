@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from tests.api.conftest import replenisher_headers
+from tests.api.conftest import api, replenisher_headers
 
 
 def _create(client, world, key: str) -> dict:
     response = client.post(
-        "/replenishments",
+        api("/replenishments"),
         headers=replenisher_headers(world, key=key),
         json={
             "machine_id": world["machine_id"],
@@ -23,12 +23,12 @@ def test_create_get_add_line_complete_cancel_flow(api_world) -> None:
     created = _create(client, api_world, "flow-create")
     rid = created["id"]
 
-    got = client.get(f"/replenishments/{rid}", headers=replenisher_headers(api_world))
+    got = client.get(api(f"/replenishments/{rid}"), headers=replenisher_headers(api_world))
     assert got.status_code == 200
     assert got.json()["id"] == rid
 
     line = client.post(
-        f"/replenishments/{rid}/lines",
+        api(f"/replenishments/{rid}/lines"),
         headers=replenisher_headers(api_world, key="flow-line"),
         json={
             "slot_id": api_world["slot_id"],
@@ -40,7 +40,7 @@ def test_create_get_add_line_complete_cancel_flow(api_world) -> None:
     assert len(line.json()["lines"]) == 1
 
     completed = client.post(
-        f"/replenishments/{rid}/complete",
+        api(f"/replenishments/{rid}/complete"),
         headers=replenisher_headers(api_world, key="flow-complete"),
         json={},
     )
@@ -53,7 +53,7 @@ def test_cancel_replenishment(api_world) -> None:
     created = _create(client, api_world, "cancel-create")
     rid = created["id"]
     cancelled = client.post(
-        f"/replenishments/{rid}/cancel",
+        api(f"/replenishments/{rid}/cancel"),
         headers=replenisher_headers(api_world, key="cancel-1"),
         json={},
     )
@@ -64,7 +64,7 @@ def test_cancel_replenishment(api_world) -> None:
 def test_unknown_replenishment_returns_404(api_world) -> None:
     client = api_world["client"]
     response = client.get(
-        "/replenishments/00000000-0000-0000-0000-000000000099",
+        api("/replenishments/00000000-0000-0000-0000-000000000099"),
         headers=replenisher_headers(api_world),
     )
     assert response.status_code == 404
@@ -78,7 +78,7 @@ def test_invalid_state_complete_twice_is_idempotent_at_domain(api_world) -> None
     created = _create(client, api_world, "twice-create")
     rid = created["id"]
     client.post(
-        f"/replenishments/{rid}/lines",
+        api(f"/replenishments/{rid}/lines"),
         headers=replenisher_headers(api_world, key="twice-line"),
         json={
             "slot_id": api_world["slot_id"],
@@ -87,13 +87,13 @@ def test_invalid_state_complete_twice_is_idempotent_at_domain(api_world) -> None
         },
     )
     first = client.post(
-        f"/replenishments/{rid}/complete",
+        api(f"/replenishments/{rid}/complete"),
         headers=replenisher_headers(api_world, key="twice-c1"),
         json={},
     )
     assert first.status_code == 200
     second = client.post(
-        f"/replenishments/{rid}/complete",
+        api(f"/replenishments/{rid}/complete"),
         headers=replenisher_headers(api_world, key="twice-c2"),
         json={},
     )
@@ -106,7 +106,7 @@ def test_capacity_exceeded_returns_409(api_world) -> None:
     created = _create(client, api_world, "cap-create")
     rid = created["id"]
     response = client.post(
-        f"/replenishments/{rid}/lines",
+        api(f"/replenishments/{rid}/lines"),
         headers=replenisher_headers(api_world, key="cap-line"),
         json={
             "slot_id": api_world["slot_id"],

@@ -2,6 +2,8 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from nexo_vending.versioning import API_PREFIX
+
 
 class Settings(BaseSettings):
     """Vending-specific runtime configuration.
@@ -13,7 +15,7 @@ class Settings(BaseSettings):
     app_name: str = "nexo-vending"
     app_env: str = "dev"
     database_url: str = "postgresql+psycopg://vending:vending@localhost:5432/vending"
-    api_prefix: str = ""
+    api_prefix: str = API_PREFIX
     log_level: str = "INFO"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

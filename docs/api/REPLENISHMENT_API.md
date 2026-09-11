@@ -2,7 +2,7 @@
 
 Status: **Implemented** (V9).
 
-Base path: `/replenishments`
+API prefix: `/api/v1`. Base path below: `/replenishments`.
 
 | Method | Path | Permission | Entitlement |
 | --- | --- | --- | --- |

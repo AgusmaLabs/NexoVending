@@ -60,8 +60,15 @@ uvicorn nexo_vending.main:app --reload
 
 Endpoints:
 
-- `GET /health` → `{"status":"ok"}`
-- `GET /health/ready` → `{"status":"ready"}` (valida PostgreSQL)
+- `GET /health` → `status`, `package_version`, `api_version`
+- `GET /health/ready` → readiness + same version fields (valida PostgreSQL)
+- Business API under `/api/v1/...` (see [docs/api/MOBILE_API_CONTRACT.md](docs/api/MOBILE_API_CONTRACT.md))
+- Versioning policy: [docs/VERSIONING.md](docs/VERSIONING.md)
+
+```bash
+# Export OpenAPI for frontend codegen
+python scripts/export_openapi.py --out docs/api/openapi-v1.json
+```
 
 ## Tests
 
@@ -83,7 +90,8 @@ pytest tests/e2e -q -m e2e
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Límites Vending ↔ Platform |
 | [docs/architecture/DOMAIN.md](docs/architecture/DOMAIN.md) | Mapa e invariantes de dominio |
 | [docs/architecture/DEPENDENCIES.md](docs/architecture/DEPENDENCIES.md) | Reglas de dependencia |
-| [docs/api/DOMAIN_CONTRACTS.md](docs/api/DOMAIN_CONTRACTS.md) | Contratos de aplicación/dominio |
+| [docs/VERSIONING.md](docs/VERSIONING.md) | SemVer del paquete + versionado HTTP `/api/v1` |
+| [docs/api/MOBILE_API_CONTRACT.md](docs/api/MOBILE_API_CONTRACT.md) | Contrato HTTP para Flutter / mobile |
 | [MIGRATIONS.md](MIGRATIONS.md) | Migraciones separadas |
 | [docs/architecture/IDENTITY_BOUNDARY.md](docs/architecture/IDENTITY_BOUNDARY.md) | Auth Platform vs Operator Vending |
 | [docs/architecture/PRODUCT_CATALOG.md](docs/architecture/PRODUCT_CATALOG.md) | Catálogo de productos |

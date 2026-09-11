@@ -1,5 +1,7 @@
 # Replenishment execution HTTP flow
 
+Paths are relative to `/api/v1`.
+
 ```text
 GET  /machines/resolve
 POST /replenishments          (+ location / accuracy_m)

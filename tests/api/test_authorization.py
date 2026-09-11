@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tests.api.conftest import auth_headers, replenisher_headers
+from tests.api.conftest import api, auth_headers, replenisher_headers
 
 
 def test_authenticated_without_permission_returns_403(api_world) -> None:
@@ -18,7 +18,7 @@ def test_authenticated_without_permission_returns_403(api_world) -> None:
     # Seed a principal with operator but no Platform permission by using a new subject
     # that is not granted — also not an operator → 403 OPERATOR_NOT_FOUND.
     response = client.post(
-        "/replenishments",
+        api("/replenishments"),
         headers=headers,
         json={
             "machine_id": api_world["machine_id"],
@@ -32,7 +32,7 @@ def test_permission_denied_when_entitlement_missing(api_world) -> None:
     client = api_world["client"]
     api_world["ents"].values["tenant-a"].discard("vending.replenishment")
     response = client.post(
-        "/replenishments",
+        api("/replenishments"),
         headers=replenisher_headers(api_world, key="no-ent"),
         json={
             "machine_id": api_world["machine_id"],

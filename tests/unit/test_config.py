@@ -8,7 +8,7 @@ def test_settings_defaults_are_vending_specific(monkeypatch) -> None:
     settings = Settings(_env_file=None)
     assert settings.app_name == "nexo-vending"
     assert "vending" in settings.database_url
-    assert settings.api_prefix == ""
+    assert settings.api_prefix == "/api/v1"
 
 
 def test_get_settings_is_cached() -> None:

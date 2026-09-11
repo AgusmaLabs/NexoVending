@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from tests.api.conftest import auth_headers, replenisher_headers
+from tests.api.conftest import api, auth_headers, replenisher_headers
 
 
 def test_tenant_a_cannot_read_tenant_b_replenishment(api_world) -> None:
     client = api_world["client"]
     # Create replenishment as tenant B
     created = client.post(
-        "/replenishments",
+        api("/replenishments"),
         headers=auth_headers(
             tenant="tenant-b",
             provider="google",
@@ -25,13 +25,13 @@ def test_tenant_a_cannot_read_tenant_b_replenishment(api_world) -> None:
     rid = created.json()["id"]
 
     denied = client.get(
-        f"/replenishments/{rid}",
+        api(f"/replenishments/{rid}"),
         headers=replenisher_headers(api_world),
     )
     assert denied.status_code == 404
 
     line = client.post(
-        f"/replenishments/{rid}/lines",
+        api(f"/replenishments/{rid}/lines"),
         headers=replenisher_headers(api_world, key="cross-line"),
         json={
             "slot_id": api_world["slot_id"],

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from tests.api.conftest import admin_headers
+from tests.api.conftest import admin_headers, api
 
 
 def test_assign_balance_and_movements(api_world) -> None:
     client = api_world["client"]
     assign = client.post(
-        "/inventory/assignments",
+        api("/inventory/assignments"),
         headers=admin_headers(api_world, key="inv-assign-1"),
         json={
             "product_id": api_world["product_id"],
@@ -20,7 +20,7 @@ def test_assign_balance_and_movements(api_world) -> None:
     assert assign.status_code == 201, assign.text
 
     balance = client.get(
-        "/inventory/balance",
+        api("/inventory/balance"),
         headers=admin_headers(api_world),
         params={
             "location_type": "REPLENISHER",
@@ -32,7 +32,7 @@ def test_assign_balance_and_movements(api_world) -> None:
     assert balance.json()["quantity"] >= 53
 
     movements = client.get(
-        "/inventory/movements",
+        api("/inventory/movements"),
         headers=admin_headers(api_world),
         params={
             "location_type": "REPLENISHER",
@@ -47,7 +47,7 @@ def test_assign_balance_and_movements(api_world) -> None:
 def test_adjust_and_loss(api_world) -> None:
     client = api_world["client"]
     adjust = client.post(
-        "/inventory/adjustments",
+        api("/inventory/adjustments"),
         headers=admin_headers(api_world, key="inv-adj-1"),
         json={
             "product_id": api_world["product_id"],
@@ -63,7 +63,7 @@ def test_adjust_and_loss(api_world) -> None:
     assert adjust.status_code == 201, adjust.text
 
     loss = client.post(
-        "/inventory/losses",
+        api("/inventory/losses"),
         headers=admin_headers(api_world, key="inv-loss-1"),
         json={
             "product_id": api_world["product_id"],

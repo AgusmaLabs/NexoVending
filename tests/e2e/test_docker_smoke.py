@@ -67,6 +67,8 @@ def test_docker_compose_runtime_smoke() -> None:
                 f"last_error={last_error}\nps={ps.stdout}\nlogs={logs.stdout}\n{logs.stderr}"
             )
 
-        assert ready_payload == {"status": "ready"}
+        assert ready_payload["status"] == "ready"
+        assert ready_payload["api_version"] == "v1"
+        assert "package_version" in ready_payload
     finally:
         _run(*compose, "down", "-v", cwd=ROOT)

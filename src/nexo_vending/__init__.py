@@ -1,5 +1,5 @@
 """NexoVending — vending business product consuming nexo-platform."""
 
-__version__ = "0.1.0"
+from nexo_vending.versioning import PACKAGE_VERSION as __version__
 
 __all__ = ["__version__"]

@@ -1,5 +1,7 @@
 # Products HTTP API (replenishment capture)
 
+API prefix: `/api/v1`.
+
 | Method | Path | Permission |
 | --- | --- | --- |
 | GET | `/products/barcode/{barcode}` | `product.read` |

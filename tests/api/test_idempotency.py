@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from sqlalchemy import text
 
-from tests.api.conftest import replenisher_headers
+from tests.api.conftest import api, replenisher_headers
 
 
 def test_complete_idempotency_key_does_not_duplicate_movements(api_world) -> None:
     client = api_world["client"]
     created = client.post(
-        "/replenishments",
+        api("/replenishments"),
         headers=replenisher_headers(api_world, key="idem-create"),
         json={
             "machine_id": api_world["machine_id"],
@@ -19,7 +19,7 @@ def test_complete_idempotency_key_does_not_duplicate_movements(api_world) -> Non
     ).json()
     rid = created["id"]
     client.post(
-        f"/replenishments/{rid}/lines",
+        api(f"/replenishments/{rid}/lines"),
         headers=replenisher_headers(api_world, key="idem-line"),
         json={
             "slot_id": api_world["slot_id"],
@@ -29,8 +29,8 @@ def test_complete_idempotency_key_does_not_duplicate_movements(api_world) -> Non
     )
 
     headers = replenisher_headers(api_world, key="COMPLETE-ABC")
-    first = client.post(f"/replenishments/{rid}/complete", headers=headers, json={})
-    second = client.post(f"/replenishments/{rid}/complete", headers=headers, json={})
+    first = client.post(api(f"/replenishments/{rid}/complete"), headers=headers, json={})
+    second = client.post(api(f"/replenishments/{rid}/complete"), headers=headers, json={})
     assert first.status_code == 200
     assert second.status_code == 200
     assert first.json()["id"] == second.json()["id"]

@@ -44,8 +44,16 @@ from nexo_vending.domain.machines.value_objects import SellingPrice
 from nexo_vending.domain.products.entities import Product
 from nexo_vending.infrastructure.persistence import VendingPersistence, transactional_uow
 from nexo_vending.main import create_app
+from nexo_vending.versioning import API_PREFIX
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def api(path: str) -> str:
+    """Build a versioned business-API path (health stays unversioned)."""
+    if not path.startswith("/"):
+        raise ValueError(f"path must be absolute, got {path!r}")
+    return f"{API_PREFIX}{path}"
 
 PLATFORM_IDEMPOTENCY_DDL = """
 CREATE TABLE IF NOT EXISTS platform_idempotency_records (

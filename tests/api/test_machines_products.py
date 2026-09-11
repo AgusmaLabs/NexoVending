@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from tests.api.conftest import replenisher_headers
+from tests.api.conftest import api, replenisher_headers
 
 
 def test_resolve_machine_by_qr(api_world) -> None:
     client = api_world["client"]
     response = client.get(
-        "/machines/resolve",
+        api("/machines/resolve"),
         headers=replenisher_headers(api_world),
         params={"identifier_type": "QR_CODE", "value": "MIX-001"},
     )
@@ -22,7 +22,7 @@ def test_resolve_machine_by_qr(api_world) -> None:
 def test_resolve_unknown_qr_404(api_world) -> None:
     client = api_world["client"]
     response = client.get(
-        "/machines/resolve",
+        api("/machines/resolve"),
         headers=replenisher_headers(api_world),
         params={"identifier_type": "QR_CODE", "value": "NOPE"},
     )
@@ -32,7 +32,7 @@ def test_resolve_unknown_qr_404(api_world) -> None:
 def test_tenant_isolation_machine(api_world) -> None:
     client = api_world["client"]
     response = client.get(
-        f"/machines/{api_world['machine_b_id']}",
+        api(f"/machines/{api_world['machine_b_id']}"),
         headers=replenisher_headers(api_world),
     )
     assert response.status_code in {403, 404}
@@ -41,7 +41,7 @@ def test_tenant_isolation_machine(api_world) -> None:
 def test_machine_slots(api_world) -> None:
     client = api_world["client"]
     response = client.get(
-        f"/machines/{api_world['machine_id']}/slots",
+        api(f"/machines/{api_world['machine_id']}/slots"),
         headers=replenisher_headers(api_world),
     )
     assert response.status_code == 200, response.text
@@ -51,14 +51,14 @@ def test_machine_slots(api_world) -> None:
 def test_product_barcode_found_and_missing(api_world) -> None:
     client = api_world["client"]
     found = client.get(
-        "/products/barcode/7800001",
+        api("/products/barcode/7800001"),
         headers=replenisher_headers(api_world),
     )
     assert found.status_code == 200
     assert found.json()["barcode"] == "7800001"
 
     missing = client.get(
-        "/products/barcode/9999999",
+        api("/products/barcode/9999999"),
         headers=replenisher_headers(api_world),
     )
     assert missing.status_code == 404
@@ -67,7 +67,7 @@ def test_product_barcode_found_and_missing(api_world) -> None:
 def test_create_replenishment_accepts_accuracy_m(api_world) -> None:
     client = api_world["client"]
     response = client.post(
-        "/replenishments",
+        api("/replenishments"),
         headers=replenisher_headers(api_world, key="acc-m"),
         json={
             "machine_id": api_world["machine_id"],

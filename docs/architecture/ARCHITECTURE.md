@@ -19,4 +19,6 @@ Domain-focused documents in this folder:
 | [../domain/REPLENISHMENT_RULES.md](../domain/REPLENISHMENT_RULES.md) | Replenishment rules |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | Layer and module dependency rules |
 | [../api/DOMAIN_CONTRACTS.md](../api/DOMAIN_CONTRACTS.md) | Repository / use-case contracts |
+| [../api/MOBILE_API_CONTRACT.md](../api/MOBILE_API_CONTRACT.md) | HTTP contract for mobile / Flutter |
+| [../VERSIONING.md](../VERSIONING.md) | Package SemVer + HTTP `/api/v1` |
 | [../adr/](../adr/) | Architecture decision records |
