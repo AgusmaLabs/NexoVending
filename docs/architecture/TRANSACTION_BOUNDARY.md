@@ -1,6 +1,6 @@
 # Transaction boundary — NexoVending
 
-Status: **Implemented** (`nexo-platform==1.7.0`). Domain multi-aggregate adapters use Platform UoW (V8).
+Status: **Implemented** (`nexo-platform==1.10.0`). Domain multi-aggregate adapters use Platform UoW (V8).
 
 ## Rule
 

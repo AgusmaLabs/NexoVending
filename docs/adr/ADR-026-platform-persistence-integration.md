@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-09
-- Updated: 2026-09-10 (`nexo-platform==1.7.0` delivers requested contracts)
+- Updated: 2026-09-11 (`nexo-platform==1.10.0` — idempotency / flags / observability available)
 
 ## Context
 
@@ -17,11 +17,12 @@ V0–V6 delivered domain and application for identity, products, machines, inven
 
 V7 review against `nexo-platform==1.2.0` found that the public `UnitOfWork` was billing-shaped and SQLAlchemy persistence lived under private modules. Vending therefore requested a generic transactional contract in Platform rather than inventing `VendingUnitOfWork`.
 
-As of `nexo-platform==1.7.0` (foundation freeze, Platform ADR-029), those contracts are published:
+As of `nexo-platform==1.10.0`, published contracts relevant to Vending include:
 
 - `TransactionalUnitOfWork` / `SqlAlchemyTransactionalUnitOfWork` (`nexo_platform.transaction`)
 - `Database` / `SessionFactory` (`nexo_platform.persistence` public package)
 - `RequestContext` / `TenantContext` / `TenantRef`
+- `IdempotencyService` (1.8+), `FeatureFlags` (1.9+), `Observability` (1.10+) — for API/adapters
 - Billing `UnitOfWork` remains a specialization (`nexo_platform.billing`)
 
 ## Decision

@@ -192,6 +192,7 @@ async def _test_complete_replenishment_commits_atomically(session_factory) -> No
             ).execute(
                 CompleteReplenishmentCommand(
                     replenishment_id=started.id,
+                    tenant_id=TenantId("tenant-a"),
                     completed_at=datetime(2026, 9, 10, 9, 10, tzinfo=UTC),
                 )
             )
@@ -324,12 +325,14 @@ async def _test_idempotent_complete_and_tenant_isolation(session_factory) -> Non
             first = await use_case.execute(
                 CompleteReplenishmentCommand(
                     replenishment_id=started.id,
+                    tenant_id=TenantId("tenant-a"),
                     completed_at=datetime(2026, 9, 10, 11, 2, tzinfo=UTC),
                 )
             )
             second = await use_case.execute(
                 CompleteReplenishmentCommand(
                     replenishment_id=started.id,
+                    tenant_id=TenantId("tenant-a"),
                     completed_at=datetime(2026, 9, 10, 11, 3, tzinfo=UTC),
                 )
             )

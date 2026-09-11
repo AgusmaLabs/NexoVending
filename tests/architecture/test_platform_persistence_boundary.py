@@ -14,6 +14,9 @@ def test_public_persistence_imports_are_allowed() -> None:
     assert is_allowed_platform_import("nexo_platform.persistence")
     assert is_allowed_platform_import("nexo_platform.transaction")
     assert is_allowed_platform_import("nexo_platform.context")
+    assert is_allowed_platform_import("nexo_platform.idempotency")
+    assert is_allowed_platform_import("nexo_platform.feature_flags")
+    assert is_allowed_platform_import("nexo_platform.observability")
     assert not is_allowed_platform_import("nexo_platform.persistence.database")
     assert not is_allowed_platform_import("nexo_platform.persistence.sqlalchemy")
 

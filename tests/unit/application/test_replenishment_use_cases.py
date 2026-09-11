@@ -158,6 +158,7 @@ async def _test_add_line_complete_and_cancel_flow() -> None:
     completed = await CompleteReplenishment(replenishments, inventory).execute(
         CompleteReplenishmentCommand(
             replenishment_id=started.id,
+            tenant_id=TenantId("tenant-a"),
             completed_at=datetime(2026, 9, 7, 12, 30, tzinfo=UTC),
         )
     )
@@ -186,6 +187,9 @@ async def _test_add_line_complete_and_cancel_flow() -> None:
         )
     )
     cancelled = await CancelReplenishment(replenishments).execute(
-        CancelReplenishmentCommand(replenishment_id=other.id)
+        CancelReplenishmentCommand(
+            replenishment_id=other.id,
+            tenant_id=TenantId("tenant-a"),
+        )
     )
     assert cancelled.status == ReplenishmentStatus.CANCELLED

@@ -24,8 +24,8 @@ FORBIDDEN_AUTH_LIBS = (
 )
 
 
-def test_consumes_nexo_platform_1_7_0() -> None:
-    assert version("nexo-platform") == "1.7.0"
+def test_consumes_nexo_platform_1_10_0() -> None:
+    assert version("nexo-platform") == "1.10.0"
 
 
 def test_platform_auth_types_come_from_nexo_platform_package() -> None:

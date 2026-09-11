@@ -21,12 +21,13 @@ Forbidden in **domain**: any `nexo_platform` import (except identity `Principal`
 
 ## What belongs where
 
-### Platform (dependency) — `nexo-platform==1.7.0`
+### Platform (dependency) — `nexo-platform==1.10.0`
 
 - Tenant / `RequestContext` / `TenantContext`
 - Public persistence: `Database`, `SessionFactory`
 - Generic transactional UoW: `TransactionalUnitOfWork`, `SqlAlchemyTransactionalUnitOfWork`
 - Transaction primitives (`RetryPolicy`, `TransactionConflict`, `NestedTransactionError`)
+- Idempotency / Feature flags / Observability contracts (**Idempotency + Observability wired in V9**)
 - DomainEvent / Outbox record shapes
 - Identity, authorization, entitlement, billing (as published)
 
@@ -35,10 +36,11 @@ Forbidden in **domain**: any `nexo_platform` import (except identity `Principal`
 - Domain: products, machines/slots, inventory ledger, replenishment aggregate (**implemented**)
 - Application use cases for replenishment / inventory / sales (**implemented**)
 - HTTP health API (**implemented**)
+- Business HTTP API for replenishment & inventory (**implemented** — V9)
 - Composition helpers around Platform `Database` (**implemented**)
 - Platform integration decisions (**implemented** — see [PLATFORM_INTEGRATION.md](docs/architecture/PLATFORM_INTEGRATION.md))
 - Vending PostgreSQL schema for domain tables (**implemented** — V8)
-- Business HTTP/mobile APIs (**planned**)
+- Sales / Admin / Flutter APIs (**planned**)
 
 ## Hexagonal layout
 
@@ -95,7 +97,7 @@ RequestContext
 
 | Capability | Status |
 | --- | --- |
-| Package bootstrap + Platform dependency | Implemented (`nexo-platform==1.7.0`) |
+| Package bootstrap + Platform dependency | Implemented (`nexo-platform==1.10.0`) |
 | Health / readiness | Implemented |
 | Domain foundation + replenishment aggregate | Implemented |
 | Inventory ledger model | Implemented |
@@ -104,10 +106,10 @@ RequestContext
 | Machine & physical slot configuration | Implemented |
 | Inventory custody ledger + machine periods + sales consumption | Implemented |
 | Repository / domain service Protocols | Implemented |
-| Platform integration review | Implemented (V7; updated for 1.7.0) |
+| Platform integration review | Implemented (V7; aligned to 1.10.0) |
 | Platform `TransactionalUnitOfWork` + public `Database` | Implemented (consumed; composition helpers) |
 | PostgreSQL domain persistence (ORM/repos/migrations) | Implemented (V8) |
-| Business HTTP API | Planned |
+| Business HTTP API (replenishment + inventory) | Implemented (V9) |
 | Agent Core integration | Future |
 
 ## Outbox and UnitOfWork

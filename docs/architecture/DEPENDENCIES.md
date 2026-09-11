@@ -64,10 +64,11 @@ Persistence (V8) must also enforce tenant via columns and constraints. See [ADR-
 
 ## Platform persistence contracts
 
-- Allowed public packages: `nexo_platform.transaction`, `nexo_platform.persistence` (`Database`, `SessionFactory` only), `nexo_platform.tenant`, `nexo_platform.context`, `events`, `outbox`, identity/authz/entitlement as published.
+- Allowed public packages: `nexo_platform.transaction`, `nexo_platform.persistence` (`Database`, `SessionFactory` only), `nexo_platform.tenant`, `nexo_platform.context`, `nexo_platform.idempotency`, `nexo_platform.feature_flags`, `nexo_platform.observability`, `events`, `outbox`, identity/authz/entitlement as published.
 - Forbidden: `nexo_platform.persistence.database` / `persistence.sqlalchemy` internals; billing domain trees; other infrastructure modules.
 - Vending binds `DATABASE_URL` through public `Database.from_url`; owns Alembic for domain tables.
 - No product-local `VendingUnitOfWork`; use `SqlAlchemyTransactionalUnitOfWork`.
+- Do not invent a second HTTP idempotency store or observability stack — use Platform contracts (V9).
 
 Details: [PLATFORM_INTEGRATION.md](PLATFORM_INTEGRATION.md), [ADR-026](../adr/ADR-026-platform-persistence-integration.md).
 

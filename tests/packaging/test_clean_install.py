@@ -79,7 +79,7 @@ def test_wheel_installs_and_imports_in_clean_venv(tmp_path: Path) -> None:
             "from nexo_vending.domain.replenishment import Replenishment; "
             "from nexo_vending.domain.inventory import InventoryLedger; "
             "from nexo_vending.domain.identity import Operator; "
-            "assert version('nexo-platform') == '1.7.0'; "
+            "assert version('nexo-platform') == '1.10.0'; "
             "assert nexo_vending.__version__; assert Tenant; assert UnitOfWork; "
             "assert TransactionalUnitOfWork is not None; assert Database is not None; "
             "assert DomainEvent(event_type='ok').event_type == 'ok'; "

@@ -1,6 +1,6 @@
 # Product Catalog — NexoVending
 
-Status: **Implemented** (domain + application). Persistence adapters are **planned**.
+Status: **Implemented** (domain + application + PostgreSQL persistence for catalog aggregates in V8).
 
 ## Map
 

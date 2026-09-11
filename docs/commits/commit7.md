@@ -92,5 +92,5 @@ V7 (este commit)
 ## 7. Siguiente paso
 
 1. ~~En el workspace **NexoPlatform**: implementar y publicar `TransactionalUnitOfWork`~~ — **hecho** (`nexo-platform` 1.3–1.7; ver `docs/TRANSACTIONS.md` / `PERSISTENCE.md`).
-2. ~~En **NexoVending**: bump de dependencia~~ — **hecho** (`nexo-platform==1.7.0`).
+2. ~~En **NexoVending**: bump de dependencia~~ — **hecho** (pin actual: `nexo-platform==1.10.0`; V7/V8 usaron 1.7+).
 3. **V8 Persistence**: ORM, migraciones, repository adapters, atomicidad multi-agregado sobre `SqlAlchemyTransactionalUnitOfWork`.

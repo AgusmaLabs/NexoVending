@@ -5,7 +5,7 @@
 
 ## Context
 
-V7 required a generic Platform UoW. Platform 1.3–1.7 published `TransactionalUnitOfWork` / `SqlAlchemyTransactionalUnitOfWork` and public `Database` / `SessionFactory`.
+V7 required a generic Platform UoW. Platform 1.3–1.10 published `TransactionalUnitOfWork` / `SqlAlchemyTransactionalUnitOfWork`, public `Database` / `SessionFactory`, and later Idempotency / FeatureFlags / Observability.
 
 ## Decision
 

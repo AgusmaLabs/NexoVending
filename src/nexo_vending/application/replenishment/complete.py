@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from nexo_vending.domain.common.errors import DomainError
-from nexo_vending.domain.common.ids import InventoryMovementId, ReplenishmentId
+from nexo_vending.domain.common.ids import InventoryMovementId, ReplenishmentId, TenantId
 from nexo_vending.domain.common.value_objects import Quantity
 from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.enums import InventoryMovementType, InventoryReferenceType
@@ -20,6 +20,7 @@ from nexo_vending.domain.replenishment.repositories import ReplenishmentReposito
 @dataclass(frozen=True, slots=True)
 class CompleteReplenishmentCommand:
     replenishment_id: ReplenishmentId
+    tenant_id: TenantId
     completed_at: datetime
 
 
@@ -36,7 +37,7 @@ class CompleteReplenishment:
 
     async def execute(self, command: CompleteReplenishmentCommand) -> Replenishment:
         replenishment = await self._replenishments.get(command.replenishment_id)
-        if replenishment is None:
+        if replenishment is None or replenishment.tenant_id != command.tenant_id:
             raise DomainError("replenishment not found")
 
         if replenishment.status == ReplenishmentStatus.COMPLETED:

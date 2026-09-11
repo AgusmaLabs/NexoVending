@@ -1,6 +1,6 @@
 # Domain Model — NexoVending
 
-Status: **Implemented** (in-memory domain foundation). Persistence adapters are **planned**.
+Status: **Implemented** (domain + PostgreSQL persistence V8). HTTP API planned (V9).
 
 ## Map
 

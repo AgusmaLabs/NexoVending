@@ -19,7 +19,7 @@ GoogleOAuthProvider / JWT
 
 ```text
 Google
-  → nexo-platform 1.7.0 (AuthenticationResult / Principal)
+  → nexo-platform 1.10.0 (AuthenticationResult / Principal)
   → RequestContext
   → nexo-vending ResolveOperator
   → Operator (tenant + principal)

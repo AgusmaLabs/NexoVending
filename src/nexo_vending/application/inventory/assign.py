@@ -12,6 +12,7 @@ from nexo_vending.application.inventory.register_movement import (
 from nexo_vending.domain.common.ids import ProductId, TenantId, UserId
 from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.enums import InventoryMovementType, InventoryReferenceType
+from nexo_vending.domain.inventory.ledger import InventoryLedger
 from nexo_vending.domain.inventory.locations import InventoryLocation
 from nexo_vending.domain.inventory.repositories import InventoryRepository
 
@@ -69,6 +70,7 @@ class RecordLossCommand:
 
 @dataclass(frozen=True, slots=True)
 class GetInventoryBalanceQuery:
+    tenant_id: TenantId
     location: InventoryLocation
     product_id: ProductId
 
@@ -177,4 +179,13 @@ class GetInventoryBalance:
         self._inventory = inventory
 
     async def execute(self, query: GetInventoryBalanceQuery) -> int:
-        return await self._inventory.expected_quantity(query.location, query.product_id)
+        movements = await self._inventory.list_movements_for_location(
+            query.location,
+            query.product_id,
+        )
+        scoped = [m for m in movements if m.tenant_id == query.tenant_id]
+        return InventoryLedger.expected_quantity(
+            scoped,
+            location=query.location,
+            product_id=query.product_id,
+        )

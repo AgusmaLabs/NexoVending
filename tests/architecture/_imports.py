@@ -20,7 +20,7 @@ FORBIDDEN_COPIED_PATHS = (
     ROOT / "modules" / "identity",
 )
 
-# Public Platform surface allowed in Vending source (nexo-platform 1.7.0+).
+# Public Platform surface allowed in Vending source (nexo-platform 1.10.0+).
 ALLOWED_PLATFORM_PREFIXES = (
     "nexo_platform",
     "nexo_platform.authorization",
@@ -28,8 +28,11 @@ ALLOWED_PLATFORM_PREFIXES = (
     "nexo_platform.context",
     "nexo_platform.entitlement",
     "nexo_platform.events",
+    "nexo_platform.feature_flags",
+    "nexo_platform.idempotency",
     "nexo_platform.identity",
     "nexo_platform.identity.authentication",
+    "nexo_platform.observability",
     "nexo_platform.outbox",
     "nexo_platform.persistence",
     "nexo_platform.shared",

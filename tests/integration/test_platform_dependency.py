@@ -6,6 +6,9 @@ from nexo_platform import (
     TransactionalUnitOfWork,
     UnitOfWork,
 )
+from nexo_platform.feature_flags import FeatureFlag, InMemoryFeatureFlags
+from nexo_platform.idempotency import IdempotencyKey, IdempotencyService
+from nexo_platform.observability import Observability
 from nexo_platform.transaction import SqlAlchemyTransactionalUnitOfWork
 
 import nexo_vending
@@ -20,6 +23,11 @@ def test_platform_and_vending_import_together() -> None:
     assert SqlAlchemyTransactionalUnitOfWork is not None
     assert Database is not None
     assert DomainEvent is not None
+    assert IdempotencyKey is not None
+    assert IdempotencyService is not None
+    assert FeatureFlag is not None
+    assert InMemoryFeatureFlags is not None
+    assert Observability.noop() is not None
 
 
 def test_vending_uses_public_domain_event_only() -> None:

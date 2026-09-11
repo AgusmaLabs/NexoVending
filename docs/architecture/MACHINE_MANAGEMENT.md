@@ -1,6 +1,6 @@
 # Machine Management — NexoVending
 
-Status: **Implemented** (domain + application). Persistence adapters and HTTP API are **planned**.
+Status: **Implemented** (domain + application + PostgreSQL persistence in V8). HTTP API is **planned** (V9).
 
 ## Purpose
 

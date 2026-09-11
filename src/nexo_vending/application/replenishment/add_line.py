@@ -20,8 +20,8 @@ class AddReplenishmentLineCommand:
     tenant_id: TenantId
     slot_id: SlotId
     quantity: int
-    unit_price: Decimal | int | float | str
     scanned_at: datetime
+    unit_price: Decimal | int | float | str | None = None
     barcode: str | None = None
     manual_description: str | None = None
     product_id: ProductId | None = None
@@ -42,6 +42,8 @@ class AddReplenishmentLine:
     async def execute(self, command: AddReplenishmentLineCommand) -> Replenishment:
         replenishment = await self._replenishments.get(command.replenishment_id)
         if replenishment is None:
+            raise DomainError("replenishment not found")
+        if replenishment.tenant_id != command.tenant_id:
             raise DomainError("replenishment not found")
 
         machine = await self._machines.get(replenishment.machine_id)
@@ -80,12 +82,19 @@ class AddReplenishmentLine:
         if product_id is not None and not snapshot:
             snapshot = "product"
 
+        if command.unit_price is not None:
+            unit_price: Decimal | int | float | str = command.unit_price
+        elif slot.selling_price is not None:
+            unit_price = slot.selling_price.amount
+        else:
+            raise DomainError("slot has no selling_price; unit_price is required")
+
         replenishment.add_line(
             machine=machine,
             slot=slot,
             product_id=product_id,
             quantity=SignedQuantity(command.quantity),
-            unit_price=command.unit_price,
+            unit_price=unit_price,
             occurred_at=command.scanned_at,
             product_description_snapshot=snapshot,
             replacement_reason=command.replacement_reason,

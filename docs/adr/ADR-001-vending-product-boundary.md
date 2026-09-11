@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-07
-- Updated: 2026-09-10 (consume `nexo-platform==1.7.0` public UoW + Database)
+- Updated: 2026-09-11 (consume `nexo-platform==1.10.0`)
 
 ## Context
 
