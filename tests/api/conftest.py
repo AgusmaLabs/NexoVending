@@ -37,6 +37,7 @@ from nexo_vending.domain.identity.enums import OperatorRole
 from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.enums import InventoryMovementType, InventoryReferenceType
 from nexo_vending.domain.inventory.locations import InventoryLocation
+from nexo_vending.domain.machines.assignment import MachineAssignment
 from nexo_vending.domain.machines.entities import Machine
 from nexo_vending.domain.machines.enums import MachineType
 from nexo_vending.domain.machines.value_objects import SellingPrice
@@ -203,6 +204,14 @@ async def _seed(session: Session) -> dict:
         )
         replenisher.activate()
         await p.operators.save(replenisher)
+        await p.assignments.save(
+            MachineAssignment.create(
+                tenant_id=tenant,
+                replenisher_id=replenisher.id,
+                machine_id=machine.id,
+                valid_from=datetime(2026, 1, 1, tzinfo=UTC),
+            )
+        )
 
         admin = Operator.provision(
             operator_id=OperatorId.new(),
@@ -251,6 +260,14 @@ async def _seed(session: Session) -> dict:
         )
         op_b.activate()
         await p.operators.save(op_b)
+        await p.assignments.save(
+            MachineAssignment.create(
+                tenant_id=tenant_b,
+                replenisher_id=op_b.id,
+                machine_id=machine_b.id,
+                valid_from=datetime(2026, 1, 1, tzinfo=UTC),
+            )
+        )
 
         return {
             "product_id": str(product.id.value),

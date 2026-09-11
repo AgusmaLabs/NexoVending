@@ -110,6 +110,7 @@ RequestContext
 | Platform `TransactionalUnitOfWork` + public `Database` | Implemented (consumed; composition helpers) |
 | PostgreSQL domain persistence (ORM/repos/migrations) | Implemented (V8) |
 | Business HTTP API (replenishment + inventory) | Implemented (V9) |
+| Replenishment execution context (resolve/slots/barcode/access) | Implemented (V10) |
 | Agent Core integration | Future |
 
 ## Outbox and UnitOfWork

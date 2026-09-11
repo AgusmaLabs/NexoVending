@@ -19,6 +19,11 @@ from nexo_vending.domain.common.errors import (
     SubstitutionRejectedError,
 )
 from nexo_vending.domain.identity.errors import IdentityError, OperatorNotFoundError
+from nexo_vending.domain.machines.errors import (
+    CrossTenantMachineAccessError,
+    MachineAccessDeniedError,
+    MachineError,
+)
 
 
 def _request_id(request: Request) -> str | None:
@@ -42,6 +47,27 @@ def _error(request: Request, *, status: int, code: str, message: str) -> JSONRes
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(MachineAccessDeniedError)
+    async def machine_access_denied(
+        request: Request, exc: MachineAccessDeniedError
+    ) -> JSONResponse:
+        return _error(request, status=403, code="MACHINE_ACCESS_DENIED", message=str(exc))
+
+    @app.exception_handler(CrossTenantMachineAccessError)
+    async def cross_tenant_machine(
+        request: Request, exc: CrossTenantMachineAccessError
+    ) -> JSONResponse:
+        return _error(request, status=404, code="NOT_FOUND", message=str(exc))
+
+    @app.exception_handler(MachineError)
+    async def machine_error(request: Request, exc: MachineError) -> JSONResponse:
+        message = str(exc)
+        if "not found" in message.lower():
+            return _error(request, status=404, code="NOT_FOUND", message=message)
+        if "not active" in message.lower():
+            return _error(request, status=409, code="INVALID_STATE", message=message)
+        return _error(request, status=409, code="MACHINE_ERROR", message=message)
+
     @app.exception_handler(OperatorNotFoundError)
     async def operator_not_found(request: Request, exc: OperatorNotFoundError) -> JSONResponse:
         return _error(request, status=403, code="OPERATOR_NOT_FOUND", message=str(exc))

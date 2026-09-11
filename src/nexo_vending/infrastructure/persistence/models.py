@@ -223,3 +223,31 @@ class InventoryMovementORM(Base):
     destination_holder_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     destination_position_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+
+class MachineAssignmentORM(Base):
+    __tablename__ = "machine_assignments"
+    __table_args__ = (
+        Index("ix_machine_assignments_tenant_id", "tenant_id"),
+        Index(
+            "ix_machine_assignments_lookup",
+            "tenant_id",
+            "replenisher_id",
+            "machine_id",
+        ),
+        UniqueConstraint(
+            "tenant_id",
+            "replenisher_id",
+            "machine_id",
+            "valid_from",
+            name="uq_machine_assignments_active_window",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    replenisher_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    machine_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

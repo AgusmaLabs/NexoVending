@@ -4,10 +4,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from nexo_vending.domain.common.errors import DomainError
+from nexo_vending.domain.common.errors import DomainError, InsufficientStockError
 from nexo_vending.domain.common.ids import ProductId, ReplenishmentId, SlotId, TenantId
 from nexo_vending.domain.common.value_objects import Barcode, SignedQuantity
+from nexo_vending.domain.inventory.locations import InventoryLocation
+from nexo_vending.domain.inventory.repositories import InventoryRepository
 from nexo_vending.domain.machines.repositories import MachineRepository
+from nexo_vending.domain.products.repositories import ProductRepository
 from nexo_vending.domain.products.services import ProductLookup
 from nexo_vending.domain.replenishment.entities import Replenishment
 from nexo_vending.domain.replenishment.enums import ReplacementReason
@@ -34,10 +37,14 @@ class AddReplenishmentLine:
         replenishments: ReplenishmentRepository,
         machines: MachineRepository,
         product_lookup: ProductLookup,
+        inventory: InventoryRepository,
+        products: ProductRepository | None = None,
     ) -> None:
         self._replenishments = replenishments
         self._machines = machines
         self._product_lookup = product_lookup
+        self._inventory = inventory
+        self._products = products
 
     async def execute(self, command: AddReplenishmentLineCommand) -> Replenishment:
         replenishment = await self._replenishments.get(command.replenishment_id)
@@ -69,9 +76,15 @@ class AddReplenishmentLine:
             elif manual:
                 snapshot = manual.strip()
             else:
-                raise DomainError("unknown product requires manual_description")
+                raise DomainError("product not found")
         elif product_id is not None:
-            snapshot = (manual or "").strip() or "product"
+            if self._products is not None:
+                product = await self._products.get(product_id)
+                if product is None or product.tenant_id != command.tenant_id:
+                    raise DomainError("product not found")
+                snapshot = (manual or "").strip() or product.display_name
+            else:
+                snapshot = (manual or "").strip() or "product"
         elif manual:
             snapshot = manual.strip()
         else:
@@ -79,7 +92,7 @@ class AddReplenishmentLine:
 
         if product_id is None:
             raise DomainError("replenishment line requires a resolved product_id")
-        if product_id is not None and not snapshot:
+        if not snapshot:
             snapshot = "product"
 
         if command.unit_price is not None:
@@ -89,11 +102,22 @@ class AddReplenishmentLine:
         else:
             raise DomainError("slot has no selling_price; unit_price is required")
 
+        quantity = SignedQuantity(command.quantity)
+        if quantity.is_load:
+            available = await self._inventory.expected_quantity(
+                InventoryLocation.replenisher(replenishment.operator_id),
+                product_id,
+            )
+            if quantity.absolute > available:
+                raise InsufficientStockError(
+                    f"insufficient replenisher inventory: need {quantity.absolute}, have {available}"
+                )
+
         replenishment.add_line(
             machine=machine,
             slot=slot,
             product_id=product_id,
-            quantity=SignedQuantity(command.quantity),
+            quantity=quantity,
             unit_price=unit_price,
             occurred_at=command.scanned_at,
             product_description_snapshot=snapshot,

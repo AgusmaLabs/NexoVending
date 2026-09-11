@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from nexo_vending.infrastructure.persistence.repositories import (
     SqlAlchemyInventoryRepository,
+    SqlAlchemyMachineAssignmentRepository,
     SqlAlchemyMachineRepository,
     SqlAlchemyOperatorRepository,
     SqlAlchemyProductRepository,
@@ -26,6 +27,7 @@ class VendingPersistence:
     operators: SqlAlchemyOperatorRepository
     replenishments: SqlAlchemyReplenishmentRepository
     inventory: SqlAlchemyInventoryRepository
+    assignments: SqlAlchemyMachineAssignmentRepository
 
     @classmethod
     def for_session(cls, session: Session) -> VendingPersistence:
@@ -36,6 +38,7 @@ class VendingPersistence:
             operators=SqlAlchemyOperatorRepository(session),
             replenishments=SqlAlchemyReplenishmentRepository(session),
             inventory=SqlAlchemyInventoryRepository(session),
+            assignments=SqlAlchemyMachineAssignmentRepository(session),
         )
 
 

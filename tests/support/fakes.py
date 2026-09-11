@@ -225,3 +225,26 @@ class InMemoryOperatorRepository:
         principal: Principal,
     ) -> Operator | None:
         return self._by_principal.get(self._key(tenant_id, principal))
+
+
+class InMemoryMachineAssignmentRepository:
+    def __init__(self) -> None:
+        self._items: list = []
+
+    async def find_active(self, *, tenant_id, replenisher_id, machine_id):
+        for assignment in reversed(self._items):
+            if (
+                assignment.tenant_id == tenant_id
+                and assignment.replenisher_id == replenisher_id
+                and assignment.machine_id == machine_id
+                and assignment.status.value == "ACTIVE"
+            ):
+                return assignment
+        return None
+
+    async def save(self, assignment) -> None:
+        for idx, existing in enumerate(self._items):
+            if existing.id == assignment.id:
+                self._items[idx] = assignment
+                return
+        self._items.append(assignment)

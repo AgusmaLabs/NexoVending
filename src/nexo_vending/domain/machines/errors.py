@@ -29,3 +29,7 @@ class DuplicateMachineCodeError(MachineError):
 
 class CrossTenantMachineAccessError(MachineError):
     pass
+
+
+class MachineAccessDeniedError(MachineError):
+    pass

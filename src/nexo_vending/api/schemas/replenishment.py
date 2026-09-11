@@ -5,13 +5,20 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class GeoLocationIn(BaseModel):
     latitude: float
     longitude: float
-    accuracy: float | None = None
+    accuracy: float | None = Field(
+        default=None,
+        validation_alias=AliasChoices("accuracy", "accuracy_m"),
+    )
+
+    @property
+    def resolved_accuracy(self) -> float:
+        return 0.0 if self.accuracy is None else self.accuracy
 
 
 class CreateReplenishmentRequest(BaseModel):

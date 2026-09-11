@@ -72,15 +72,13 @@ async def create_replenishment(
     async def _handler(factory):
         result = await factory.start_replenishment().execute(
             StartReplenishmentCommand(
-                operator_id=operator.id,
+                operator=operator,
                 machine_id=MachineId(UUID(body.machine_id)),
                 started_at=started_at,
                 location=GeoLocation(
                     latitude=body.location.latitude,
                     longitude=body.location.longitude,
-                    accuracy=body.location.accuracy
-                    if body.location.accuracy is not None
-                    else 0.0,
+                    accuracy=body.location.resolved_accuracy,
                 ),
                 idempotency_key=key,
             )

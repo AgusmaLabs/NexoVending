@@ -33,6 +33,11 @@ from nexo_vending.domain.inventory.enums import (
     InventoryReferenceType,
 )
 from nexo_vending.domain.inventory.locations import InventoryLocation
+from nexo_vending.domain.machines.assignment import (
+    MachineAssignment,
+    MachineAssignmentId,
+    MachineAssignmentStatus,
+)
 from nexo_vending.domain.machines.entities import Machine, MachineSlot
 from nexo_vending.domain.machines.enums import MachineStatus, MachineType, SlotStatus
 from nexo_vending.domain.machines.value_objects import MachineCode, MachineLocation, SellingPrice
@@ -43,6 +48,7 @@ from nexo_vending.domain.replenishment.entities import Replenishment, Replenishm
 from nexo_vending.domain.replenishment.enums import ReplacementReason, ReplenishmentStatus
 from nexo_vending.infrastructure.persistence.models import (
     InventoryMovementORM,
+    MachineAssignmentORM,
     MachineORM,
     MachineSlotORM,
     OperatorORM,
@@ -356,4 +362,30 @@ def movement_from_orm(row: InventoryMovementORM) -> InventoryMovement:
             row.destination_position_id,
         ),
         idempotency_key=row.idempotency_key,
+    )
+
+
+def assignment_to_orm(assignment: MachineAssignment) -> MachineAssignmentORM:
+    return MachineAssignmentORM(
+        id=assignment.id.value,
+        tenant_id=assignment.tenant_id.value,
+        replenisher_id=assignment.replenisher_id.value,
+        machine_id=assignment.machine_id.value,
+        status=assignment.status.value,
+        valid_from=assignment.validity_period.valid_from,
+        valid_until=assignment.validity_period.valid_until,
+    )
+
+
+def assignment_from_orm(row: MachineAssignmentORM) -> MachineAssignment:
+    return MachineAssignment(
+        id=MachineAssignmentId(row.id),
+        tenant_id=TenantId(row.tenant_id),
+        replenisher_id=OperatorId(row.replenisher_id),
+        machine_id=MachineId(row.machine_id),
+        validity_period=ValidityPeriod(
+            valid_from=row.valid_from,
+            valid_until=row.valid_until,
+        ),
+        status=MachineAssignmentStatus(row.status),
     )

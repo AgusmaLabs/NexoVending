@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from nexo_platform.identity.authentication import Principal
 from nexo_platform.transaction import NestedTransactionError, TransactionConflict
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -31,9 +32,12 @@ from nexo_vending.domain.common.ids import (
     UserId,
 )
 from nexo_vending.domain.common.value_objects import Barcode, GeoLocation, Quantity
+from nexo_vending.domain.identity.entities import Operator
+from nexo_vending.domain.identity.enums import OperatorRole
 from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.enums import InventoryMovementType, InventoryReferenceType
 from nexo_vending.domain.inventory.locations import InventoryLocation
+from nexo_vending.domain.machines.assignment import MachineAssignment
 from nexo_vending.domain.machines.entities import Machine
 from nexo_vending.domain.machines.enums import MachineType
 from nexo_vending.domain.machines.value_objects import SellingPrice
@@ -90,7 +94,8 @@ async def _seed(
     session: Session,
     *,
     tenant: str = "tenant-a",
-) -> tuple[Product, Machine, UserId]:
+    code: str = "MIX-001",
+) -> tuple[Product, Machine, Operator]:
     persistence = VendingPersistence.for_session(session)
     tenant_id = TenantId(tenant)
     product = Product.create(
@@ -104,7 +109,7 @@ async def _seed(
     machine = Machine.create(
         machine_id=MachineId.new(),
         tenant_id=tenant_id,
-        code="MIX-001",
+        code=code,
         name="Lobby",
         machine_type=MachineType.SNACK,
         created_at=datetime(2026, 9, 10, tzinfo=UTC),
@@ -115,7 +120,23 @@ async def _seed(
         selling_price=SellingPrice(amount=Decimal("1500")),
     )
     await persistence.machines.save(machine)
-    operator = UserId.new()
+    operator = Operator.provision(
+        operator_id=UserId.new(),
+        tenant_id=tenant_id,
+        principal=Principal(provider="google", subject=f"op-{tenant}-{code}"),
+        role=OperatorRole.OPERATOR,
+        valid_from=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    operator.activate()
+    await persistence.operators.save(operator)
+    await persistence.assignments.save(
+        MachineAssignment.create(
+            tenant_id=tenant_id,
+            replenisher_id=operator.id,
+            machine_id=machine.id,
+            valid_from=datetime(2026, 1, 1, tzinfo=UTC),
+        )
+    )
     await persistence.inventory.record_movement(
         InventoryMovement(
             id=InventoryMovementId.new(),
@@ -126,9 +147,9 @@ async def _seed(
             reference_type=InventoryReferenceType.ASSIGNMENT,
             reference_id="seed",
             occurred_at=datetime(2026, 9, 10, 8, 0, tzinfo=UTC),
-            actor_id=operator,
-            destination_location=InventoryLocation.replenisher(operator),
-            idempotency_key=f"{tenant}:seed:{operator.value}",
+            actor_id=operator.id,
+            destination_location=InventoryLocation.replenisher(operator.id),
+            idempotency_key=f"{tenant}:seed:{operator.id.value}",
         )
     )
     return product, machine, operator
@@ -153,9 +174,10 @@ async def _test_complete_replenishment_commits_atomically(session_factory) -> No
             started = await StartReplenishment(
                 persistence.machines,
                 persistence.replenishments,
+                persistence.assignments,
             ).execute(
                 StartReplenishmentCommand(
-                    operator_id=operator,
+                    operator=operator,
                     machine_id=machine.id,
                     started_at=datetime(2026, 9, 10, 9, 0, tzinfo=UTC),
                     location=GeoLocation(latitude=-33.4, longitude=-70.6, accuracy=5.0),
@@ -175,6 +197,8 @@ async def _test_complete_replenishment_commits_atomically(session_factory) -> No
                 persistence.replenishments,
                 persistence.machines,
                 _Lookup(),
+                persistence.inventory,
+                persistence.products,
             ).execute(
                 AddReplenishmentLineCommand(
                     replenishment_id=started.id,
@@ -207,7 +231,7 @@ async def _test_complete_replenishment_commits_atomically(session_factory) -> No
         assert len(movements) == 2  # seed + replenishment
         assert (
             await VendingPersistence.for_session(verify).inventory.expected_quantity(
-                InventoryLocation.replenisher(operator_id),
+                InventoryLocation.replenisher(operator_id.id),
                 product_id,
             )
             == 10
@@ -237,9 +261,10 @@ async def _test_complete_replenishment_rollback(session_factory) -> None:
             started = await StartReplenishment(
                 persistence.machines,
                 persistence.replenishments,
+                persistence.assignments,
             ).execute(
                 StartReplenishmentCommand(
-                    operator_id=operator,
+                    operator=operator,
                     machine_id=machine.id,
                     started_at=datetime(2026, 9, 10, 10, 0, tzinfo=UTC),
                     location=GeoLocation(latitude=-33.4, longitude=-70.6, accuracy=5.0),
@@ -286,7 +311,7 @@ async def _test_idempotent_complete_and_tenant_isolation(session_factory) -> Non
             product, machine, operator = await _seed(session, tenant="tenant-a")
             slot = machine.slots[0]
             # Tenant B product/machine with same idempotency key namespace
-            product_b, machine_b, operator_b = await _seed(session, tenant="tenant-b")
+            product_b, machine_b, operator_b = await _seed(session, tenant="tenant-b", code="MIX-B")
 
             from nexo_vending.application.replenishment.add_line import (
                 AddReplenishmentLine,
@@ -298,10 +323,10 @@ async def _test_idempotent_complete_and_tenant_isolation(session_factory) -> Non
                     return await persistence.products.find_by_barcode(tenant_id, barcode)
 
             started = await StartReplenishment(
-                persistence.machines, persistence.replenishments
+                persistence.machines, persistence.replenishments, persistence.assignments
             ).execute(
                 StartReplenishmentCommand(
-                    operator_id=operator,
+                    operator=operator,
                     machine_id=machine.id,
                     started_at=datetime(2026, 9, 10, 11, 0, tzinfo=UTC),
                     location=GeoLocation(latitude=-33.4, longitude=-70.6, accuracy=5.0),
@@ -309,7 +334,8 @@ async def _test_idempotent_complete_and_tenant_isolation(session_factory) -> Non
                 )
             )
             await AddReplenishmentLine(
-                persistence.replenishments, persistence.machines, _Lookup()
+                persistence.replenishments, persistence.machines, _Lookup(),
+                persistence.inventory, persistence.products,
             ).execute(
                 AddReplenishmentLineCommand(
                     replenishment_id=started.id,
@@ -339,10 +365,10 @@ async def _test_idempotent_complete_and_tenant_isolation(session_factory) -> Non
             assert first.id == second.id
             # Tenant B can reuse same idempotency key
             started_b = await StartReplenishment(
-                persistence.machines, persistence.replenishments
+                persistence.machines, persistence.replenishments, persistence.assignments
             ).execute(
                 StartReplenishmentCommand(
-                    operator_id=operator_b,
+                    operator=operator_b,
                     machine_id=machine_b.id,
                     started_at=datetime(2026, 9, 10, 11, 0, tzinfo=UTC),
                     location=GeoLocation(latitude=-33.4, longitude=-70.6, accuracy=5.0),
@@ -379,10 +405,10 @@ async def _test_optimistic_locking_on_replenishment(session_factory) -> None:
             persistence = VendingPersistence.for_session(session)
             _product, machine, operator = await _seed(session)
             started = await StartReplenishment(
-                persistence.machines, persistence.replenishments
+                persistence.machines, persistence.replenishments, persistence.assignments
             ).execute(
                 StartReplenishmentCommand(
-                    operator_id=operator,
+                    operator=operator,
                     machine_id=machine.id,
                     started_at=datetime(2026, 9, 10, 12, 0, tzinfo=UTC),
                     location=GeoLocation(latitude=-33.4, longitude=-70.6, accuracy=5.0),

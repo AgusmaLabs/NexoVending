@@ -19,12 +19,15 @@ from nexo_vending.domain.identity.entities import Operator
 from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.ledger import InventoryLedger
 from nexo_vending.domain.inventory.locations import InventoryLocation
+from nexo_vending.domain.machines.assignment import MachineAssignment
 from nexo_vending.domain.machines.entities import Machine
 from nexo_vending.domain.machines.value_objects import MachineCode
 from nexo_vending.domain.products.entities import Product
 from nexo_vending.domain.products.enums import ProductStatus
 from nexo_vending.domain.replenishment.entities import Replenishment
 from nexo_vending.infrastructure.persistence.mappers import (
+    assignment_from_orm,
+    assignment_to_orm,
     machine_from_orm,
     machine_to_orm,
     movement_from_orm,
@@ -38,6 +41,7 @@ from nexo_vending.infrastructure.persistence.mappers import (
 )
 from nexo_vending.infrastructure.persistence.models import (
     InventoryMovementORM,
+    MachineAssignmentORM,
     MachineORM,
     MachineSlotORM,
     OperatorORM,
@@ -240,4 +244,43 @@ class SqlAlchemyInventoryRepository:
             )
             InventoryLedger.ensure_can_apply(known, movement)
         self._session.add(movement_to_orm(movement))
+        self._session.flush()
+
+
+class SqlAlchemyMachineAssignmentRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    async def find_active(
+        self,
+        *,
+        tenant_id: TenantId,
+        replenisher_id: OperatorId,
+        machine_id: MachineId,
+    ) -> MachineAssignment | None:
+        stmt = (
+            select(MachineAssignmentORM)
+            .where(
+                MachineAssignmentORM.tenant_id == tenant_id.value,
+                MachineAssignmentORM.replenisher_id == replenisher_id.value,
+                MachineAssignmentORM.machine_id == machine_id.value,
+                MachineAssignmentORM.status == "ACTIVE",
+            )
+            .order_by(MachineAssignmentORM.valid_from.desc())
+        )
+        rows = list(self._session.execute(stmt).scalars())
+        for row in rows:
+            assignment = assignment_from_orm(row)
+            # Caller validates effective window; return the most recent ACTIVE row.
+            return assignment
+        return None
+
+    async def save(self, assignment: MachineAssignment) -> None:
+        existing = self._session.get(MachineAssignmentORM, assignment.id.value)
+        if existing is None:
+            self._session.add(assignment_to_orm(assignment))
+        else:
+            existing.status = assignment.status.value
+            existing.valid_from = assignment.validity_period.valid_from
+            existing.valid_until = assignment.validity_period.valid_until
         self._session.flush()

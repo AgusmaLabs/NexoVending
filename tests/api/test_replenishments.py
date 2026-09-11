@@ -111,7 +111,7 @@ def test_capacity_exceeded_returns_409(api_world) -> None:
         json={
             "slot_id": api_world["slot_id"],
             "product_id": api_world["product_id"],
-            "quantity": 99,
+            "quantity": 11,
         },
     )
     assert response.status_code == 409

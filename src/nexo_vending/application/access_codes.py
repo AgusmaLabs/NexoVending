@@ -12,6 +12,10 @@ REPLENISHMENT_ADD_LINE = Permission("replenishment.add_line")
 REPLENISHMENT_COMPLETE = Permission("replenishment.complete")
 REPLENISHMENT_CANCEL = Permission("replenishment.cancel")
 
+MACHINE_READ = Permission("machine.read")
+MACHINE_RESOLVE = Permission("machine.resolve")
+PRODUCT_READ = Permission("product.read")
+
 INVENTORY_ASSIGN = Permission("inventory.assign")
 INVENTORY_RETURN = Permission("inventory.return")
 INVENTORY_ADJUST = Permission("inventory.adjust")
@@ -28,6 +32,9 @@ ALL_REPLENISHMENT_PERMISSIONS = (
     REPLENISHMENT_ADD_LINE,
     REPLENISHMENT_COMPLETE,
     REPLENISHMENT_CANCEL,
+    MACHINE_READ,
+    MACHINE_RESOLVE,
+    PRODUCT_READ,
 )
 
 ALL_INVENTORY_PERMISSIONS = (

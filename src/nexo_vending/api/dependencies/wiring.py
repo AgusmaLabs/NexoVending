@@ -19,6 +19,11 @@ from nexo_vending.application.inventory.assign import (
     ReturnInventory,
 )
 from nexo_vending.application.inventory.list_movements import ListInventoryMovements
+from nexo_vending.application.machines.assign_machine import AssignMachineToReplenisher
+from nexo_vending.application.machines.get_machine import GetMachine
+from nexo_vending.application.machines.get_machine_slots import GetMachineSlots
+from nexo_vending.application.machines.resolve_machine import ResolveMachine
+from nexo_vending.application.products.find_product_by_barcode import FindProductByBarcode
 from nexo_vending.application.replenishment.add_line import AddReplenishmentLine
 from nexo_vending.application.replenishment.cancel import CancelReplenishment
 from nexo_vending.application.replenishment.complete import CompleteReplenishment
@@ -41,6 +46,7 @@ class UseCaseFactory:
         return StartReplenishment(
             self.persistence.machines,
             self.persistence.replenishments,
+            self.persistence.assignments,
         )
 
     def get_replenishment(self) -> GetReplenishment:
@@ -50,6 +56,8 @@ class UseCaseFactory:
         return AddReplenishmentLine(
             self.persistence.replenishments,
             self.persistence.machines,
+            self.persistence.products,
+            self.persistence.inventory,
             self.persistence.products,
         )
 
@@ -79,6 +87,28 @@ class UseCaseFactory:
 
     def list_inventory_movements(self) -> ListInventoryMovements:
         return ListInventoryMovements(self.persistence.inventory)
+
+    def resolve_machine(self) -> ResolveMachine:
+        return ResolveMachine(self.persistence.machines, self.persistence.assignments)
+
+    def get_machine(self) -> GetMachine:
+        return GetMachine(self.persistence.machines)
+
+    def get_machine_slots(self) -> GetMachineSlots:
+        return GetMachineSlots(
+            self.persistence.machines,
+            self.persistence.assignments,
+            self.persistence.inventory,
+        )
+
+    def find_product_by_barcode(self) -> FindProductByBarcode:
+        return FindProductByBarcode(self.persistence.products)
+
+    def assign_machine(self) -> AssignMachineToReplenisher:
+        return AssignMachineToReplenisher(
+            self.persistence.machines,
+            self.persistence.assignments,
+        )
 
 
 def request_hash_for(payload: bytes | str) -> str:
