@@ -20,7 +20,7 @@ def test_alembic_upgrade_and_downgrade(postgres_url: str) -> None:
     try:
         with engine.connect() as connection:
             version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "0003_machine_assignments"
+        assert version == "0004_pending_product_resolution"
     finally:
         engine.dispose()
 

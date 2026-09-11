@@ -156,7 +156,16 @@ class ReplenishmentORM(Base):
 
 class ReplenishmentLineORM(Base):
     __tablename__ = "replenishment_lines"
-    __table_args__ = (Index("ix_replenishment_lines_replenishment_id", "replenishment_id"),)
+    __table_args__ = (
+        Index("ix_replenishment_lines_replenishment_id", "replenishment_id"),
+        Index("ix_replenishment_lines_resolution_status", "resolution_status"),
+        CheckConstraint(
+            "(resolution_status = 'resolved' AND product_id IS NOT NULL) OR "
+            "(resolution_status = 'pending_product_resolution' AND product_id IS NULL "
+            "AND manual_description IS NOT NULL AND length(trim(manual_description)) > 0)",
+            name="ck_replenishment_lines_resolution_product",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
     replenishment_id: Mapped[UUID] = mapped_column(
@@ -165,7 +174,7 @@ class ReplenishmentLineORM(Base):
         nullable=False,
     )
     machine_position_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
-    product_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    product_id: Mapped[UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -176,6 +185,9 @@ class ReplenishmentLineORM(Base):
     replacement_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     barcode_scanned: Mapped[str | None] = mapped_column(String(64), nullable=True)
     manual_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolution_status: Mapped[str] = mapped_column(String(64), nullable=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_by_operator_id: Mapped[UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
 
     replenishment: Mapped[ReplenishmentORM] = relationship(back_populates="lines")
 

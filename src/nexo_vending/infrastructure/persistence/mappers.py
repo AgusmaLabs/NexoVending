@@ -45,7 +45,11 @@ from nexo_vending.domain.products.entities import Product
 from nexo_vending.domain.products.enums import ProductStatus, ProductUnit
 from nexo_vending.domain.products.value_objects import ProductName
 from nexo_vending.domain.replenishment.entities import Replenishment, ReplenishmentLine
-from nexo_vending.domain.replenishment.enums import ReplacementReason, ReplenishmentStatus
+from nexo_vending.domain.replenishment.enums import (
+    LineResolutionStatus,
+    ReplacementReason,
+    ReplenishmentStatus,
+)
 from nexo_vending.infrastructure.persistence.models import (
     InventoryMovementORM,
     MachineAssignmentORM,
@@ -248,7 +252,7 @@ def replenishment_to_orm(replenishment: Replenishment) -> ReplenishmentORM:
                 id=line.id.value,
                 replenishment_id=replenishment.id.value,
                 machine_position_id=line.machine_position_id.value,
-                product_id=line.product_id.value,
+                product_id=line.product_id.value if line.product_id is not None else None,
                 quantity=line.quantity.value,
                 unit_price=line.unit_price,
                 occurred_at=line.occurred_at,
@@ -263,6 +267,13 @@ def replenishment_to_orm(replenishment: Replenishment) -> ReplenishmentORM:
                 ),
                 barcode_scanned=line.barcode_scanned.value if line.barcode_scanned else None,
                 manual_description=line.manual_description,
+                resolution_status=line.resolution_status.value,
+                resolved_at=line.resolved_at,
+                resolved_by_operator_id=(
+                    line.resolved_by_operator_id.value
+                    if line.resolved_by_operator_id is not None
+                    else None
+                ),
             )
             for line in replenishment.lines
         ],
@@ -293,11 +304,14 @@ def replenishment_from_orm(row: ReplenishmentORM) -> Replenishment:
             ReplenishmentLine(
                 id=ReplenishmentLineId(line_row.id),
                 machine_position_id=SlotId(line_row.machine_position_id),
-                product_id=ProductId(line_row.product_id),
+                product_id=(
+                    ProductId(line_row.product_id) if line_row.product_id is not None else None
+                ),
                 quantity=SignedQuantity(line_row.quantity),
                 unit_price=Decimal(line_row.unit_price),
                 occurred_at=line_row.occurred_at,
                 product_description_snapshot=line_row.product_description_snapshot,
+                resolution_status=LineResolutionStatus(line_row.resolution_status),
                 preferred_product_id_snapshot=(
                     ProductId(line_row.preferred_product_id_snapshot)
                     if line_row.preferred_product_id_snapshot
@@ -312,6 +326,12 @@ def replenishment_from_orm(row: ReplenishmentORM) -> Replenishment:
                     Barcode(line_row.barcode_scanned) if line_row.barcode_scanned else None
                 ),
                 manual_description=line_row.manual_description,
+                resolved_at=line_row.resolved_at,
+                resolved_by_operator_id=(
+                    OperatorId(line_row.resolved_by_operator_id)
+                    if line_row.resolved_by_operator_id is not None
+                    else None
+                ),
             )
         )
     return replenishment

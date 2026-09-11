@@ -7,6 +7,7 @@ from typing import Any
 from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.locations import InventoryLocation
 from nexo_vending.domain.replenishment.entities import Replenishment
+from nexo_vending.domain.replenishment.pending import PendingProductResolutionItem
 
 
 def location_to_dict(location: InventoryLocation | None) -> dict[str, str] | None:
@@ -45,11 +46,14 @@ def replenishment_to_dict(replenishment: Replenishment) -> dict[str, Any]:
             {
                 "id": str(line.id.value),
                 "slot_id": str(line.machine_position_id.value),
-                "product_id": str(line.product_id.value),
+                "product_id": (
+                    str(line.product_id.value) if line.product_id is not None else None
+                ),
                 "quantity": line.quantity.value,
                 "unit_price": str(line.unit_price),
                 "occurred_at": line.occurred_at.isoformat(),
                 "product_description_snapshot": line.product_description_snapshot,
+                "resolution_status": line.resolution_status.value,
                 "preferred_product_id_snapshot": (
                     str(line.preferred_product_id_snapshot.value)
                     if line.preferred_product_id_snapshot is not None
@@ -64,9 +68,32 @@ def replenishment_to_dict(replenishment: Replenishment) -> dict[str, Any]:
                     line.barcode_scanned.value if line.barcode_scanned is not None else None
                 ),
                 "manual_description": line.manual_description,
+                "resolved_at": (
+                    line.resolved_at.isoformat() if line.resolved_at is not None else None
+                ),
+                "resolved_by_operator_id": (
+                    str(line.resolved_by_operator_id.value)
+                    if line.resolved_by_operator_id is not None
+                    else None
+                ),
             }
             for line in replenishment.lines
         ],
+    }
+
+
+def pending_resolution_to_dict(item: PendingProductResolutionItem) -> dict[str, Any]:
+    return {
+        "replenishment_id": str(item.replenishment_id.value),
+        "line_id": str(item.line_id.value),
+        "machine_id": str(item.machine_id.value),
+        "slot_id": str(item.slot_id.value),
+        "quantity": item.quantity,
+        "manual_description": item.manual_description,
+        "barcode_scanned": item.barcode_scanned,
+        "occurred_at": item.occurred_at.isoformat(),
+        "product_description_snapshot": item.product_description_snapshot,
+        "visit_status": item.visit_status.value,
     }
 
 

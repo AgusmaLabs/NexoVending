@@ -10,4 +10,7 @@ def test_sqlalchemy_connects_to_real_postgres(postgres_engine) -> None:
 
 
 def test_readiness_against_postgres(postgres_engine) -> None:
-    assert readiness(postgres_engine) == {"status": "ready"}
+    payload = readiness(postgres_engine)
+    assert payload["status"] == "ready"
+    assert payload["api_version"] == "v1"
+    assert "package_version" in payload

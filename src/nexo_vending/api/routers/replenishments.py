@@ -5,12 +5,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends, Header, Query, Request
 from nexo_platform.tenant import RequestContext, TenantContext
 from sqlalchemy.orm import Session
 
 from nexo_vending.api.dependencies.access import (
     ensure_can_replenish,
+    ensure_can_resolve_product,
     get_observability,
     require_permission,
 )
@@ -21,9 +22,11 @@ from nexo_vending.api.schemas.replenishment import (
     CancelReplenishmentRequest,
     CompleteReplenishmentRequest,
     CreateReplenishmentRequest,
+    PendingProductResolutionsOut,
     ReplenishmentOut,
+    ResolveReplenishmentLineProductRequest,
 )
-from nexo_vending.api.serializers import replenishment_to_dict
+from nexo_vending.api.serializers import pending_resolution_to_dict, replenishment_to_dict
 from nexo_vending.application.access_codes import (
     ENTITLEMENT_REPLENISHMENT,
     REPLENISHMENT_ADD_LINE,
@@ -31,16 +34,24 @@ from nexo_vending.application.access_codes import (
     REPLENISHMENT_COMPLETE,
     REPLENISHMENT_CREATE,
     REPLENISHMENT_READ,
+    REPLENISHMENT_RESOLVE_PRODUCT,
 )
 from nexo_vending.application.replenishment.add_line import AddReplenishmentLineCommand
 from nexo_vending.application.replenishment.cancel import CancelReplenishmentCommand
 from nexo_vending.application.replenishment.complete import CompleteReplenishmentCommand
 from nexo_vending.application.replenishment.get import GetReplenishmentQuery
+from nexo_vending.application.replenishment.list_pending_lines import (
+    ListPendingProductResolutionsQuery,
+)
+from nexo_vending.application.replenishment.resolve_line_product import (
+    ResolveReplenishmentLineProductCommand,
+)
 from nexo_vending.application.replenishment.start import StartReplenishmentCommand
 from nexo_vending.domain.common.ids import (
     MachineId,
     ProductId,
     ReplenishmentId,
+    ReplenishmentLineId,
     SlotId,
     TenantId,
 )
@@ -95,6 +106,42 @@ async def create_replenishment(
     )
     obs.logger.info("replenishment.create.completed", context=context)
     return payload
+
+
+@router.get(
+    "/pending-product-resolutions",
+    response_model=PendingProductResolutionsOut,
+)
+async def list_pending_product_resolutions(
+    request: Request,
+    session: Session = Depends(get_db_session),
+    access: tuple[RequestContext, Operator] = Depends(
+        require_permission(REPLENISHMENT_RESOLVE_PRODUCT, ENTITLEMENT_REPLENISHMENT)
+    ),
+    machine_id: str | None = Query(default=None),
+    replenishment_id: str | None = Query(default=None),
+) -> dict:
+    context, operator = access
+    ensure_can_resolve_product(operator)
+    tenant_id = TenantId.from_raw(TenantContext.from_request(context).require_tenant_id())
+    get_observability(request).logger.info(
+        "replenishment.pending_product_resolutions",
+        context=context,
+    )
+
+    async def _handler(factory):
+        items = await factory.list_pending_product_resolutions().execute(
+            ListPendingProductResolutionsQuery(
+                tenant_id=tenant_id,
+                machine_id=MachineId(UUID(machine_id)) if machine_id else None,
+                replenishment_id=(
+                    ReplenishmentId(UUID(replenishment_id)) if replenishment_id else None
+                ),
+            )
+        )
+        return {"items": [pending_resolution_to_dict(item) for item in items]}
+
+    return await run_query(session, _handler)
 
 
 @router.get("/{replenishment_id}", response_model=ReplenishmentOut)
@@ -168,6 +215,55 @@ async def add_replenishment_line(
         operation="replenishment.add_line",
         idempotency_key=idempotency_key,
         request_hash=request_hash_for(raw),
+        handler=_handler,
+    )
+
+
+@router.post(
+    "/{replenishment_id}/lines/{line_id}/resolve-product",
+    response_model=ReplenishmentOut,
+)
+async def resolve_replenishment_line_product(
+    replenishment_id: str,
+    line_id: str,
+    body: ResolveReplenishmentLineProductRequest,
+    request: Request,
+    session: Session = Depends(get_db_session),
+    access: tuple[RequestContext, Operator] = Depends(
+        require_permission(REPLENISHMENT_RESOLVE_PRODUCT, ENTITLEMENT_REPLENISHMENT)
+    ),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> dict:
+    context, operator = access
+    ensure_can_resolve_product(operator)
+    tenant_id = TenantId.from_raw(TenantContext.from_request(context).require_tenant_id())
+    resolved_at = body.resolved_at or datetime.now(UTC)
+    if body.resolved_at is not None:
+        raw = f"{replenishment_id}:{line_id}:{body.product_id}:{body.resolved_at.isoformat()}"
+    else:
+        raw = f"{replenishment_id}:{line_id}:{body.product_id}"
+    obs = get_observability(request)
+    obs.logger.info("replenishment.resolve_product.started", context=context)
+
+    async def _handler(factory):
+        result = await factory.resolve_replenishment_line_product().execute(
+            ResolveReplenishmentLineProductCommand(
+                tenant_id=tenant_id,
+                replenishment_id=ReplenishmentId(UUID(replenishment_id)),
+                line_id=ReplenishmentLineId(UUID(line_id)),
+                product_id=ProductId(UUID(body.product_id)),
+                resolved_at=resolved_at,
+                actor_operator_id=operator.id,
+            )
+        )
+        return replenishment_to_dict(result)
+
+    return await run_mutating(
+        session,
+        context=context,
+        operation="replenishment.resolve_product",
+        idempotency_key=idempotency_key,
+        request_hash=request_hash_for(raw.encode("utf-8")),
         handler=_handler,
     )
 

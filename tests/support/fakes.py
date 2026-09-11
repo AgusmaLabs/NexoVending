@@ -19,6 +19,7 @@ from nexo_vending.domain.inventory.locations import InventoryLocation
 from nexo_vending.domain.machines.entities import Machine
 from nexo_vending.domain.products.entities import Product
 from nexo_vending.domain.replenishment.entities import Replenishment
+from nexo_vending.domain.replenishment.pending import PendingProductResolutionItem
 
 
 class InMemoryProductRepository:
@@ -109,6 +110,48 @@ class InMemoryReplenishmentRepository:
         self._by_key[(replenishment.tenant_id.value, replenishment.idempotency_key)] = (
             replenishment
         )
+
+    async def list_pending_product_resolutions(
+        self,
+        tenant_id: TenantId,
+        *,
+        machine_id: MachineId | None = None,
+        replenishment_id: ReplenishmentId | None = None,
+    ) -> list[PendingProductResolutionItem]:
+        items: list[PendingProductResolutionItem] = []
+        for replenishment in self._by_id.values():
+            if replenishment.tenant_id != tenant_id:
+                continue
+            if machine_id is not None and replenishment.machine_id != machine_id:
+                continue
+            if (
+                replenishment_id is not None
+                and replenishment.id != replenishment_id
+            ):
+                continue
+            for line in replenishment.lines:
+                if not line.is_pending_product_resolution:
+                    continue
+                items.append(
+                    PendingProductResolutionItem(
+                        replenishment_id=replenishment.id,
+                        line_id=line.id,
+                        machine_id=replenishment.machine_id,
+                        slot_id=line.machine_position_id,
+                        quantity=line.quantity.value,
+                        manual_description=line.manual_description or "",
+                        barcode_scanned=(
+                            line.barcode_scanned.value
+                            if line.barcode_scanned is not None
+                            else None
+                        ),
+                        occurred_at=line.occurred_at,
+                        product_description_snapshot=line.product_description_snapshot,
+                        visit_status=replenishment.status,
+                    )
+                )
+        items.sort(key=lambda item: item.occurred_at)
+        return items
 
 
 class InMemoryInventoryRepository:

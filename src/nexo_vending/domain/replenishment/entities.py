@@ -11,6 +11,7 @@ from nexo_vending.domain.common.errors import (
 )
 from nexo_vending.domain.common.ids import (
     MachineId,
+    OperatorId,
     ProductId,
     ReplenishmentId,
     ReplenishmentLineId,
@@ -28,6 +29,7 @@ from nexo_vending.domain.machines.entities import Machine, MachineSlot
 from nexo_vending.domain.machines.enums import MachineType
 from nexo_vending.domain.replenishment.capacity import validate_operation_capacity
 from nexo_vending.domain.replenishment.enums import (
+    LineResolutionStatus,
     ReplacementReason,
     ReplenishmentStatus,
 )
@@ -38,32 +40,74 @@ from nexo_vending.domain.replenishment.substitution import resolve_substitution
 class ReplenishmentLine:
     id: ReplenishmentLineId
     machine_position_id: SlotId
-    product_id: ProductId
+    product_id: ProductId | None
     quantity: SignedQuantity
     unit_price: Decimal
     occurred_at: datetime
     product_description_snapshot: str
+    resolution_status: LineResolutionStatus = LineResolutionStatus.RESOLVED
     preferred_product_id_snapshot: ProductId | None = None
     replacement_reason: ReplacementReason | None = None
     barcode_scanned: Barcode | None = None
     manual_description: str | None = None
+    resolved_at: datetime | None = None
+    resolved_by_operator_id: OperatorId | None = None
 
     def __post_init__(self) -> None:
         require_aware(self.occurred_at, field_name="occurred_at")
+        if self.resolved_at is not None:
+            require_aware(self.resolved_at, field_name="resolved_at")
+
         snapshot = self.product_description_snapshot.strip()
         if not snapshot:
             raise InvalidReplenishmentLineError(
                 "product_description_snapshot is required"
             )
         object.__setattr__(self, "product_description_snapshot", snapshot)
+
         price = Decimal(self.unit_price)
         if price < 0:
             raise InvalidReplenishmentLineError("unit_price must be >= 0")
         object.__setattr__(self, "unit_price", price)
+
         manual = self.manual_description.strip() if self.manual_description else None
         if manual == "":
             manual = None
         object.__setattr__(self, "manual_description", manual)
+
+        if self.resolution_status == LineResolutionStatus.RESOLVED:
+            if self.product_id is None:
+                raise InvalidReplenishmentLineError(
+                    "resolved line requires product_id"
+                )
+        elif self.resolution_status == LineResolutionStatus.PENDING_PRODUCT_RESOLUTION:
+            if self.product_id is not None:
+                raise InvalidReplenishmentLineError(
+                    "pending line cannot have product_id"
+                )
+            if manual is None:
+                raise InvalidReplenishmentLineError(
+                    "pending line requires manual_description"
+                )
+            if self.replacement_reason is not None:
+                raise InvalidReplenishmentLineError(
+                    "pending line cannot have replacement_reason"
+                )
+            object.__setattr__(self, "product_description_snapshot", manual)
+        else:
+            raise InvalidReplenishmentLineError(
+                f"unknown resolution_status {self.resolution_status}"
+            )
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.resolution_status == LineResolutionStatus.RESOLVED
+
+    @property
+    def is_pending_product_resolution(self) -> bool:
+        return (
+            self.resolution_status == LineResolutionStatus.PENDING_PRODUCT_RESOLUTION
+        )
 
 
 @dataclass(slots=True)
@@ -131,16 +175,22 @@ class Replenishment:
                 f"cannot modify replenishment in status {self.status}"
             )
 
+    def _find_line_index(self, line_id: ReplenishmentLineId) -> int:
+        for index, line in enumerate(self._lines):
+            if line.id == line_id:
+                return index
+        raise InvalidReplenishmentLineError("line not found")
+
     def add_line(
         self,
         *,
         machine: Machine,
         slot: MachineSlot,
-        product_id: ProductId,
         quantity: SignedQuantity | int,
         unit_price: Decimal | int | float | str,
         occurred_at: datetime,
         product_description_snapshot: str,
+        product_id: ProductId | None = None,
         replacement_reason: ReplacementReason | None = None,
         barcode_scanned: Barcode | None = None,
         manual_description: str | None = None,
@@ -158,29 +208,98 @@ class Replenishment:
         validate_operation_capacity(quantity=signed, capacity=slot.capacity)
 
         price = Decimal(str(unit_price))
-        preferred_snapshot, reason = resolve_substitution(
-            preferred_product_id=slot.preferred_product_id,
-            actual_product_id=product_id,
-            configured_price=slot.selling_price,
-            unit_price=price,
-            replacement_reason=replacement_reason,
-        )
-
-        line = ReplenishmentLine(
-            id=line_id or ReplenishmentLineId.new(),
-            machine_position_id=slot.id,
-            product_id=product_id,
-            quantity=signed,
-            unit_price=price,
-            occurred_at=occurred_at,
-            product_description_snapshot=product_description_snapshot,
-            preferred_product_id_snapshot=preferred_snapshot,
-            replacement_reason=reason,
-            barcode_scanned=barcode_scanned,
-            manual_description=manual_description,
-        )
+        if product_id is None:
+            if replacement_reason is not None:
+                raise InvalidReplenishmentLineError(
+                    "pending line cannot have replacement_reason"
+                )
+            manual = manual_description.strip() if manual_description else None
+            if not manual:
+                raise InvalidReplenishmentLineError(
+                    "pending line requires manual_description"
+                )
+            line = ReplenishmentLine(
+                id=line_id or ReplenishmentLineId.new(),
+                machine_position_id=slot.id,
+                product_id=None,
+                quantity=signed,
+                unit_price=price,
+                occurred_at=occurred_at,
+                product_description_snapshot=manual,
+                resolution_status=LineResolutionStatus.PENDING_PRODUCT_RESOLUTION,
+                preferred_product_id_snapshot=slot.preferred_product_id,
+                replacement_reason=None,
+                barcode_scanned=barcode_scanned,
+                manual_description=manual,
+            )
+        else:
+            preferred_snapshot, reason = resolve_substitution(
+                preferred_product_id=slot.preferred_product_id,
+                actual_product_id=product_id,
+                configured_price=slot.selling_price,
+                unit_price=price,
+                replacement_reason=replacement_reason,
+            )
+            line = ReplenishmentLine(
+                id=line_id or ReplenishmentLineId.new(),
+                machine_position_id=slot.id,
+                product_id=product_id,
+                quantity=signed,
+                unit_price=price,
+                occurred_at=occurred_at,
+                product_description_snapshot=product_description_snapshot,
+                resolution_status=LineResolutionStatus.RESOLVED,
+                preferred_product_id_snapshot=preferred_snapshot,
+                replacement_reason=reason,
+                barcode_scanned=barcode_scanned,
+                manual_description=manual_description,
+            )
         self._lines.append(line)
         return line
+
+    def resolve_line_product(
+        self,
+        *,
+        line_id: ReplenishmentLineId,
+        product_id: ProductId,
+        product_description_snapshot: str,
+        resolved_at: datetime,
+        resolved_by_operator_id: OperatorId,
+    ) -> ReplenishmentLine:
+        if self.status == ReplenishmentStatus.CANCELLED:
+            raise InvalidReplenishmentStateError(
+                "cannot resolve product on cancelled replenishment"
+            )
+        require_aware(resolved_at, field_name="resolved_at")
+        index = self._find_line_index(line_id)
+        existing = self._lines[index]
+        if existing.resolution_status == LineResolutionStatus.RESOLVED:
+            if existing.product_id == product_id:
+                return existing
+            raise InvalidReplenishmentLineError(
+                "line already resolved with different product"
+            )
+        if existing.resolution_status != LineResolutionStatus.PENDING_PRODUCT_RESOLUTION:
+            raise InvalidReplenishmentLineError("line is not pending product resolution")
+
+        resolved = ReplenishmentLine(
+            id=existing.id,
+            machine_position_id=existing.machine_position_id,
+            product_id=product_id,
+            quantity=existing.quantity,
+            unit_price=existing.unit_price,
+            occurred_at=existing.occurred_at,
+            product_description_snapshot=product_description_snapshot,
+            resolution_status=LineResolutionStatus.RESOLVED,
+            preferred_product_id_snapshot=existing.preferred_product_id_snapshot,
+            replacement_reason=None,
+            barcode_scanned=existing.barcode_scanned,
+            manual_description=existing.manual_description,
+            resolved_at=resolved_at,
+            resolved_by_operator_id=resolved_by_operator_id,
+        )
+        self._lines[index] = resolved
+        return resolved
 
     def complete(self, *, completed_at: datetime) -> None:
         self._ensure_in_progress()

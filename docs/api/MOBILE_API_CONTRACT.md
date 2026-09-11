@@ -1,6 +1,6 @@
 # Mobile API Contract — NexoVending
 
-Status: **Implemented** (V9 HTTP + V10 execution context).  
+Status: **Implemented** (V9 HTTP + V10 execution context + V11 unresolved product).  
 Audience: Flutter / mobile developers integrating with NexoVending.  
 Source of truth: `src/nexo_vending/api/` (OpenAPI also at `/docs` when the server runs).
 
@@ -120,6 +120,15 @@ Entitlement: `vending.replenishment`. Mutating routes also require an ACTIVE **O
 | POST | `/replenishments/{id}/complete` | `replenishment.complete` | 200 |
 | POST | `/replenishments/{id}/cancel` | `replenishment.cancel` | 200 |
 
+### 4.4b Admin product resolution (not typical replenisher UX)
+
+Requires ADMIN + `replenishment.resolve_product`:
+
+| Method | Path | Permission | Success |
+| --- | --- | --- | ---: |
+| GET | `/replenishments/pending-product-resolutions` | `replenishment.resolve_product` | 200 |
+| POST | `/replenishments/{id}/lines/{line_id}/resolve-product` | `replenishment.resolve_product` | 200 |
+
 ### 4.5 Inventory (admin / back-office style)
 
 Entitlement: `vending.inventory`. Mutations require **ADMIN** (`can_manage_inventory`). Typical replenisher mobile apps may **not** call these.
@@ -133,7 +142,7 @@ Entitlement: `vending.inventory`. Mutations require **ADMIN** (`can_manage_inven
 | GET | `/inventory/balance` | `inventory.read` | 200 |
 | GET | `/inventory/movements` | `inventory.read` | 200 |
 
-**Total business + health routes: 17.**
+**Total business + health routes: 19.**
 
 ---
 
@@ -304,6 +313,8 @@ Response: `ReplenishmentOut` (see §6.8). Status starts as `IN_PROGRESS`.
 
 `POST /replenishments/{id}/lines` → **200**
 
+**Resolved (catalog product known):**
+
 ```json
 {
   "slot_id": "…",
@@ -313,25 +324,38 @@ Response: `ReplenishmentOut` (see §6.8). Status starts as `IN_PROGRESS`.
 }
 ```
 
+**Pending product resolution (barcode 404 or unreadable; V11):**
+
+```json
+{
+  "slot_id": "…",
+  "quantity": 5,
+  "barcode": "123456789",
+  "manual_description": "Bebida energética X",
+  "product_id": null
+}
+```
+
 | Field | Required | Notes |
 | --- | --- | --- |
 | `slot_id` | yes | Must belong to the replenishment’s machine |
 | `quantity` | yes | Positive = load; negative = unload; must respect capacity |
-| `product_id` | recommended | From barcode lookup |
-| `barcode` | optional | Alternative resolution path |
-| `manual_description` | optional | Snapshot aid; line still needs resolved `product_id` |
-| `replacement_reason` | if substituting | `OUT_OF_STOCK` \| `SLOT_EMPTY` \| `OPERATIONAL_DECISION` |
+| `product_id` | for RESOLVED | From barcode lookup when known |
+| `barcode` | optional | Lookup path; unknown + `manual_description` → PENDING |
+| `manual_description` | for PENDING | Required when product identity is unknown |
+| `replacement_reason` | if substituting | Only on RESOLVED lines |
 | `unit_price` | no | Defaults to slot `selling_price` |
-| `scanned_at` | no | Server UTC now if omitted; line keeps its own timestamp |
+| `scanned_at` | no | Server UTC now if omitted |
+
+After barcode **404**: retry scan in UX; if still unknown, require `manual_description` and POST a PENDING line (`product_id` null, `resolution_status=pending_product_resolution`). Complete is allowed with pending lines; machine stock by SKU is incomplete until admin resolve.
 
 Server validates (examples):
 
 - replenishment `IN_PROGRESS`
 - slot on machine
-- product exists in tenant
+- RESOLVED: product exists in tenant + replenisher stock for loads
+- PENDING: no replenisher stock check; no `replacement_reason`
 - quantity vs slot capacity
-- replenisher has enough stock for loads
-- substitution / preferred product rules
 
 Failures → **409** with codes such as `CAPACITY_EXCEEDED`, `INSUFFICIENT_INVENTORY`, `SUBSTITUTION_REJECTED`, `INVALID_STATE`.
 
@@ -529,7 +553,9 @@ Admin inventory permissions (`inventory.*` + `vending.inventory`) are separate.
 - [ ] Resolve machine before creating replenishment  
 - [ ] Persist `Idempotency-Key` for create / line / complete  
 - [ ] Treat barcode 404 as “unknown product”, not as create  
-- [ ] Prefer `product_id` from lookup when adding lines  
+- [ ] On unknown/unreadable barcode: require `manual_description` and POST PENDING line  
+- [ ] Allow complete with pending lines; do not invent `product_id`  
+- [ ] Prefer `product_id` from lookup when adding RESOLVED lines  
 - [ ] Show 409 codes with actionable UX (capacity, stock, substitution)  
 - [ ] Use `/machines/{id}/slots` for layout + current qty  
 - [ ] Treat cross-tenant misses as 404  
@@ -539,4 +565,4 @@ Admin inventory permissions (`inventory.*` + `vending.inventory`) are separate.
 
 ## 13. Versioning note
 
-This contract reflects the current NexoVending HTTP surface (**V9 + V10**). Breaking changes will be documented in ADRs / API docs and should bump OpenAPI accordingly. Prefer consuming OpenAPI (`/openapi.json`) in CI for client codegen, and treat this markdown as the human-readable mobile contract.
+This contract reflects the current NexoVending HTTP surface (**V9 + V10 + V11**). Breaking changes will be documented in ADRs / API docs and should bump OpenAPI accordingly. Prefer consuming OpenAPI (`/openapi.json`) in CI for client codegen, and treat this markdown as the human-readable mobile contract.

@@ -18,7 +18,11 @@ from nexo_vending.application.identity.resolve_operator import (
     ResolveOperatorQuery,
 )
 from nexo_vending.domain.identity.entities import Operator
-from nexo_vending.domain.identity.policies import can_manage_inventory, can_operator_replenish
+from nexo_vending.domain.identity.policies import (
+    can_manage_catalog,
+    can_manage_inventory,
+    can_operator_replenish,
+)
 from nexo_vending.infrastructure.persistence import VendingPersistence
 
 
@@ -108,3 +112,8 @@ def ensure_can_replenish(operator: Operator, *, at: datetime | None = None) -> N
 def ensure_can_manage_inventory(operator: Operator) -> None:
     if not can_manage_inventory(operator):
         raise PermissionError("operator cannot manage inventory")
+
+
+def ensure_can_resolve_product(operator: Operator) -> None:
+    if not can_manage_catalog(operator):
+        raise PermissionError("operator cannot resolve replenishment products")

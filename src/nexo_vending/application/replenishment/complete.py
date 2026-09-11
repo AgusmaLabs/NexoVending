@@ -12,7 +12,7 @@ from nexo_vending.domain.inventory.entities import InventoryMovement
 from nexo_vending.domain.inventory.enums import InventoryMovementType, InventoryReferenceType
 from nexo_vending.domain.inventory.locations import InventoryLocation
 from nexo_vending.domain.inventory.repositories import InventoryRepository
-from nexo_vending.domain.replenishment.entities import Replenishment
+from nexo_vending.domain.replenishment.entities import Replenishment, ReplenishmentLine
 from nexo_vending.domain.replenishment.enums import ReplenishmentStatus
 from nexo_vending.domain.replenishment.repositories import ReplenishmentRepository
 
@@ -24,8 +24,18 @@ class CompleteReplenishmentCommand:
     completed_at: datetime
 
 
+def movement_idempotency_key_for_line(replenishment: Replenishment, line: ReplenishmentLine) -> str:
+    return f"{replenishment.idempotency_key}:line:{line.id.value}"
+
+
+def deferred_resolve_idempotency_key(
+    replenishment: Replenishment, line: ReplenishmentLine
+) -> str:
+    return f"{replenishment.idempotency_key}:line:{line.id.value}:resolve"
+
+
 class CompleteReplenishment:
-    """Complete visit and record REPLENISHMENT / SLOT_REMOVAL movements."""
+    """Complete visit and record movements only for RESOLVED lines."""
 
     def __init__(
         self,
@@ -44,13 +54,15 @@ class CompleteReplenishment:
             return replenishment
 
         for line in replenishment.lines:
+            if not line.is_resolved or line.product_id is None:
+                continue
             abs_qty = line.quantity.absolute
             slot_location = InventoryLocation.machine_slot(
                 replenishment.machine_id,
                 line.machine_position_id,
             )
             replenisher_location = InventoryLocation.replenisher(replenishment.operator_id)
-            key = f"{replenishment.idempotency_key}:line:{line.id.value}"
+            key = movement_idempotency_key_for_line(replenishment, line)
             existing = await self._inventory.find_by_idempotency_key(
                 replenishment.tenant_id,
                 key,

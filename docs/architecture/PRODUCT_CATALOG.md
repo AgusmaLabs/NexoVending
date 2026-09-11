@@ -36,7 +36,16 @@ Product found?
   yes  no
    │    │
    ▼    ▼
-Product  Unknown barcode → Replenishment manual_description
+Product  Unknown / unreadable barcode
+         ↓
+         ReplenishmentLine PENDING_PRODUCT_RESOLUTION
+           (manual_description required, product_id null)
+         ↓
+         Admin creates Product in catalog (separate use case)
+         ↓
+         ResolveReplenishmentLineProduct
+         ↓
+         Deferred InventoryMovement
          (does NOT auto-create Product)
 ```
 

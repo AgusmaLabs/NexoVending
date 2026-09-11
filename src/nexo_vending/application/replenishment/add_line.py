@@ -73,7 +73,7 @@ class AddReplenishmentLine:
             if product is not None:
                 product_id = product.id
                 snapshot = product.display_name
-            elif manual:
+            elif manual and manual.strip():
                 snapshot = manual.strip()
             else:
                 raise DomainError("product not found")
@@ -85,13 +85,11 @@ class AddReplenishmentLine:
                 snapshot = (manual or "").strip() or product.display_name
             else:
                 snapshot = (manual or "").strip() or "product"
-        elif manual:
+        elif manual and manual.strip():
             snapshot = manual.strip()
         else:
             raise DomainError("line requires product identity or manual_description")
 
-        if product_id is None:
-            raise DomainError("replenishment line requires a resolved product_id")
         if not snapshot:
             snapshot = "product"
 
@@ -103,7 +101,7 @@ class AddReplenishmentLine:
             raise DomainError("slot has no selling_price; unit_price is required")
 
         quantity = SignedQuantity(command.quantity)
-        if quantity.is_load:
+        if product_id is not None and quantity.is_load:
             available = await self._inventory.expected_quantity(
                 InventoryLocation.replenisher(replenishment.operator_id),
                 product_id,
@@ -123,7 +121,7 @@ class AddReplenishmentLine:
             product_description_snapshot=snapshot,
             replacement_reason=command.replacement_reason,
             barcode_scanned=barcode,
-            manual_description=manual if command.product_id is None and barcode else None,
+            manual_description=manual,
         )
         await self._replenishments.save(replenishment)
         return replenishment

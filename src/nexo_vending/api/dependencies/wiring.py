@@ -28,6 +28,12 @@ from nexo_vending.application.replenishment.add_line import AddReplenishmentLine
 from nexo_vending.application.replenishment.cancel import CancelReplenishment
 from nexo_vending.application.replenishment.complete import CompleteReplenishment
 from nexo_vending.application.replenishment.get import GetReplenishment
+from nexo_vending.application.replenishment.list_pending_lines import (
+    ListPendingProductResolutions,
+)
+from nexo_vending.application.replenishment.resolve_line_product import (
+    ResolveReplenishmentLineProduct,
+)
 from nexo_vending.application.replenishment.start import StartReplenishment
 from nexo_vending.infrastructure.persistence import VendingPersistence, transactional_uow
 
@@ -69,6 +75,16 @@ class UseCaseFactory:
 
     def cancel_replenishment(self) -> CancelReplenishment:
         return CancelReplenishment(self.persistence.replenishments)
+
+    def resolve_replenishment_line_product(self) -> ResolveReplenishmentLineProduct:
+        return ResolveReplenishmentLineProduct(
+            self.persistence.replenishments,
+            self.persistence.products,
+            self.persistence.inventory,
+        )
+
+    def list_pending_product_resolutions(self) -> ListPendingProductResolutions:
+        return ListPendingProductResolutions(self.persistence.replenishments)
 
     def assign_inventory(self) -> AssignInventory:
         return AssignInventory(self.persistence.inventory)

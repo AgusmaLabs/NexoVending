@@ -11,6 +11,7 @@ REPLENISHMENT_READ = Permission("replenishment.read")
 REPLENISHMENT_ADD_LINE = Permission("replenishment.add_line")
 REPLENISHMENT_COMPLETE = Permission("replenishment.complete")
 REPLENISHMENT_CANCEL = Permission("replenishment.cancel")
+REPLENISHMENT_RESOLVE_PRODUCT = Permission("replenishment.resolve_product")
 
 MACHINE_READ = Permission("machine.read")
 MACHINE_RESOLVE = Permission("machine.resolve")
@@ -32,6 +33,7 @@ ALL_REPLENISHMENT_PERMISSIONS = (
     REPLENISHMENT_ADD_LINE,
     REPLENISHMENT_COMPLETE,
     REPLENISHMENT_CANCEL,
+    REPLENISHMENT_RESOLVE_PRODUCT,
     MACHINE_READ,
     MACHINE_RESOLVE,
     PRODUCT_READ,

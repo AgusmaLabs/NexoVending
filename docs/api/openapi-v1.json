@@ -535,6 +535,119 @@
         }
       }
     },
+    "/api/v1/replenishments/pending-product-resolutions": {
+      "get": {
+        "tags": [
+          "replenishments"
+        ],
+        "summary": "List Pending Product Resolutions",
+        "operationId": "list_pending_product_resolutions_api_v1_replenishments_pending_product_resolutions_get",
+        "parameters": [
+          {
+            "name": "machine_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Machine Id"
+            }
+          },
+          {
+            "name": "replenishment_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Replenishment Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "X-Tenant-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Tenant-Id"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingProductResolutionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/replenishments/{replenishment_id}": {
       "get": {
         "tags": [
@@ -713,6 +826,131 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AddReplenishmentLineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplenishmentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/replenishments/{replenishment_id}/lines/{line_id}/resolve-product": {
+      "post": {
+        "tags": [
+          "replenishments"
+        ],
+        "summary": "Resolve Replenishment Line Product",
+        "operationId": "resolve_replenishment_line_product_api_v1_replenishments__replenishment_id__lines__line_id__resolve_product_post",
+        "parameters": [
+          {
+            "name": "replenishment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Replenishment Id"
+            }
+          },
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Line Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "X-Tenant-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Tenant-Id"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveReplenishmentLineProductRequest"
               }
             }
           }
@@ -2265,6 +2503,83 @@
         ],
         "title": "MachineSlotsOut"
       },
+      "PendingProductResolutionOut": {
+        "properties": {
+          "replenishment_id": {
+            "type": "string",
+            "title": "Replenishment Id"
+          },
+          "line_id": {
+            "type": "string",
+            "title": "Line Id"
+          },
+          "machine_id": {
+            "type": "string",
+            "title": "Machine Id"
+          },
+          "slot_id": {
+            "type": "string",
+            "title": "Slot Id"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "manual_description": {
+            "type": "string",
+            "title": "Manual Description"
+          },
+          "barcode_scanned": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Barcode Scanned"
+          },
+          "occurred_at": {
+            "type": "string",
+            "title": "Occurred At"
+          },
+          "product_description_snapshot": {
+            "type": "string",
+            "title": "Product Description Snapshot"
+          },
+          "visit_status": {
+            "type": "string",
+            "title": "Visit Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "replenishment_id",
+          "line_id",
+          "machine_id",
+          "slot_id",
+          "quantity",
+          "manual_description",
+          "occurred_at",
+          "product_description_snapshot",
+          "visit_status"
+        ],
+        "title": "PendingProductResolutionOut"
+      },
+      "PendingProductResolutionsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PendingProductResolutionOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "title": "PendingProductResolutionsOut"
+      },
       "ProductOut": {
         "properties": {
           "product_id": {
@@ -2348,7 +2663,14 @@
             "title": "Slot Id"
           },
           "product_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Product Id"
           },
           "quantity": {
@@ -2366,6 +2688,10 @@
           "product_description_snapshot": {
             "type": "string",
             "title": "Product Description Snapshot"
+          },
+          "resolution_status": {
+            "type": "string",
+            "title": "Resolution Status"
           },
           "preferred_product_id_snapshot": {
             "anyOf": [
@@ -2410,6 +2736,28 @@
               }
             ],
             "title": "Manual Description"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by_operator_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By Operator Id"
           }
         },
         "type": "object",
@@ -2420,7 +2768,8 @@
           "quantity",
           "unit_price",
           "occurred_at",
-          "product_description_snapshot"
+          "product_description_snapshot",
+          "resolution_status"
         ],
         "title": "ReplenishmentLineOut"
       },
@@ -2504,6 +2853,31 @@
           "version"
         ],
         "title": "ReplenishmentOut"
+      },
+      "ResolveReplenishmentLineProductRequest": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "title": "Product Id"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id"
+        ],
+        "title": "ResolveReplenishmentLineProductRequest"
       },
       "ReturnInventoryRequest": {
         "properties": {

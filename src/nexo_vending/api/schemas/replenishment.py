@@ -46,18 +46,26 @@ class CancelReplenishmentRequest(BaseModel):
     cancelled_at: datetime | None = None
 
 
+class ResolveReplenishmentLineProductRequest(BaseModel):
+    product_id: str
+    resolved_at: datetime | None = None
+
+
 class ReplenishmentLineOut(BaseModel):
     id: str
     slot_id: str
-    product_id: str
+    product_id: str | None
     quantity: int
     unit_price: str
     occurred_at: str
     product_description_snapshot: str
+    resolution_status: str
     preferred_product_id_snapshot: str | None = None
     replacement_reason: str | None = None
     barcode_scanned: str | None = None
     manual_description: str | None = None
+    resolved_at: str | None = None
+    resolved_by_operator_id: str | None = None
 
 
 class ReplenishmentOut(BaseModel):
@@ -72,3 +80,20 @@ class ReplenishmentOut(BaseModel):
     idempotency_key: str
     version: int
     lines: list[ReplenishmentLineOut] = Field(default_factory=list)
+
+
+class PendingProductResolutionOut(BaseModel):
+    replenishment_id: str
+    line_id: str
+    machine_id: str
+    slot_id: str
+    quantity: int
+    manual_description: str
+    barcode_scanned: str | None = None
+    occurred_at: str
+    product_description_snapshot: str
+    visit_status: str
+
+
+class PendingProductResolutionsOut(BaseModel):
+    items: list[PendingProductResolutionOut] = Field(default_factory=list)

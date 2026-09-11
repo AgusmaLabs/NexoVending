@@ -12,6 +12,8 @@ from nexo_vending.domain.common.ids import (
     OperatorId,
     ProductId,
     ReplenishmentId,
+    ReplenishmentLineId,
+    SlotId,
     TenantId,
 )
 from nexo_vending.domain.common.value_objects import Barcode
@@ -25,6 +27,8 @@ from nexo_vending.domain.machines.value_objects import MachineCode
 from nexo_vending.domain.products.entities import Product
 from nexo_vending.domain.products.enums import ProductStatus
 from nexo_vending.domain.replenishment.entities import Replenishment
+from nexo_vending.domain.replenishment.enums import LineResolutionStatus, ReplenishmentStatus
+from nexo_vending.domain.replenishment.pending import PendingProductResolutionItem
 from nexo_vending.infrastructure.persistence.mappers import (
     assignment_from_orm,
     assignment_to_orm,
@@ -178,6 +182,49 @@ class SqlAlchemyReplenishmentRepository:
             return
         self._session.add(replenishment_to_orm(replenishment))
         self._session.flush()
+
+    async def list_pending_product_resolutions(
+        self,
+        tenant_id: TenantId,
+        *,
+        machine_id: MachineId | None = None,
+        replenishment_id: ReplenishmentId | None = None,
+    ) -> list[PendingProductResolutionItem]:
+        stmt = (
+            select(ReplenishmentORM, ReplenishmentLineORM)
+            .join(
+                ReplenishmentLineORM,
+                ReplenishmentLineORM.replenishment_id == ReplenishmentORM.id,
+            )
+            .where(
+                ReplenishmentORM.tenant_id == tenant_id.value,
+                ReplenishmentLineORM.resolution_status
+                == LineResolutionStatus.PENDING_PRODUCT_RESOLUTION.value,
+            )
+            .order_by(ReplenishmentLineORM.occurred_at.asc())
+        )
+        if machine_id is not None:
+            stmt = stmt.where(ReplenishmentORM.machine_id == machine_id.value)
+        if replenishment_id is not None:
+            stmt = stmt.where(ReplenishmentORM.id == replenishment_id.value)
+
+        items: list[PendingProductResolutionItem] = []
+        for visit, line in self._session.execute(stmt).all():
+            items.append(
+                PendingProductResolutionItem(
+                    replenishment_id=ReplenishmentId(visit.id),
+                    line_id=ReplenishmentLineId(line.id),
+                    machine_id=MachineId(visit.machine_id),
+                    slot_id=SlotId(line.machine_position_id),
+                    quantity=line.quantity,
+                    manual_description=line.manual_description or "",
+                    barcode_scanned=line.barcode_scanned,
+                    occurred_at=line.occurred_at,
+                    product_description_snapshot=line.product_description_snapshot,
+                    visit_status=ReplenishmentStatus(visit.status),
+                )
+            )
+        return items
 
 
 class SqlAlchemyInventoryRepository:

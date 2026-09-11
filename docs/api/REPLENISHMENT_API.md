@@ -1,6 +1,6 @@
 # Replenishment HTTP API
 
-Status: **Implemented** (V9).
+Status: **Implemented** (V9 + V11 pending product resolution).
 
 API prefix: `/api/v1`. Base path below: `/replenishments`.
 
@@ -11,6 +11,8 @@ API prefix: `/api/v1`. Base path below: `/replenishments`.
 | POST | `/replenishments/{id}/lines` | `replenishment.add_line` | `vending.replenishment` |
 | POST | `/replenishments/{id}/complete` | `replenishment.complete` | `vending.replenishment` |
 | POST | `/replenishments/{id}/cancel` | `replenishment.cancel` | `vending.replenishment` |
+| GET | `/replenishments/pending-product-resolutions` | `replenishment.resolve_product` | `vending.replenishment` |
+| POST | `/replenishments/{id}/lines/{line_id}/resolve-product` | `replenishment.resolve_product` | `vending.replenishment` |
 
 ## Create
 
