@@ -1,6 +1,6 @@
 # Platform Integration — NexoVending
 
-Status: **Aligned with `nexo-platform==1.10.0`**.  
+Status: **Aligned with `nexo-platform==1.11.0`**.  
 V8 domain persistence uses Platform `Database` + `SqlAlchemyTransactionalUnitOfWork`.  
 V9 HTTP should also consume Platform **Idempotency**, **Observability**, and (where needed) **FeatureFlags** — do not reimplement them in Vending.
 
@@ -18,7 +18,7 @@ Platform references: `docs/PLATFORM_PUBLIC_API.md`, `PLATFORM_CONSUMER_GUIDE.md`
 | How is the transaction implemented? | `async with SqlAlchemyTransactionalUnitOfWork(session)`; Vending repos share that Session. |
 | How are tenant limits modeled? | `tenant_id` on business rows + repo filters + DB constraints; authority from `RequestContext` / `TenantContext`. |
 
-## What Vending consumes today (`nexo-platform==1.10.0`)
+## What Vending consumes today (`nexo-platform==1.11.0`)
 
 | Capability | Since | Public import | Vending use |
 | --- | --- | --- | --- |
@@ -86,7 +86,7 @@ finally:
 | Public `Database` / `SessionFactory` | Consumed (V8) |
 | Vending domain SQL adapters | Implemented (V8) |
 | Platform Idempotency / FeatureFlags / Observability | Idempotency + Observability **wired in V9 API**; FeatureFlags available |
-| Dependency pin | **`nexo-platform==1.10.0`** (`vendor/nexo_platform-1.10.0-*.whl`) |
+| Dependency pin | **`nexo-platform==1.11.0`** (`vendor/nexo_platform-1.11.0-*.whl`) |
 | V9 HTTP replenishment / inventory | **Implemented** |
 
 ### Idempotency note

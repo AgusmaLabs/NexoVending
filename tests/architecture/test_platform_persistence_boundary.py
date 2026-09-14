@@ -29,7 +29,7 @@ def test_vending_does_not_import_persistence_internals() -> None:
                 "nexo_platform.persistence",
             }:
                 violations.append(f"{file} imports {module}")
-            if not is_allowed_platform_import(module):
+            if not is_allowed_platform_import(module, path=file):
                 violations.append(f"{file} imports forbidden {module}")
     assert not violations, "\n".join(violations)
 

@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 from nexo_platform.authorization import AuthorizationService
 from nexo_platform.entitlement import EntitlementService
+from nexo_platform.identity import AuthenticationProvider, JwtService
 from nexo_platform.observability import Observability
 
+from nexo_vending.api.dependencies.auth_providers import (
+    build_authentication_provider,
+    build_jwt_service,
+)
 from nexo_vending.api.error_handlers import register_exception_handlers
 from nexo_vending.api.health import router as health_router
 from nexo_vending.api.router import api_router
@@ -15,6 +20,8 @@ def create_app(
     authorization: AuthorizationService | None = None,
     entitlements: EntitlementService | None = None,
     observability: Observability | None = None,
+    jwt_service: JwtService | None = None,
+    authentication_provider: AuthenticationProvider | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
@@ -29,6 +36,12 @@ def create_app(
     app.state.authorization = authorization or AuthorizationService()
     app.state.entitlements = entitlements or EntitlementService()
     app.state.observability = observability or Observability.noop()
+    app.state.jwt_service = jwt_service or build_jwt_service(settings)
+    app.state.authentication_provider = (
+        authentication_provider
+        if authentication_provider is not None
+        else build_authentication_provider(settings)
+    )
     register_exception_handlers(app)
 
     # Probes stay at process root (not under /api/v1).

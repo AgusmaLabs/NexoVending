@@ -1,10 +1,10 @@
 # Mobile API Contract — NexoVending
 
-Status: **Implemented** (V9 HTTP + V10 execution context + V11 unresolved product).  
+Status: **Implemented** (V9 HTTP + V10 execution context + V11 unresolved product + V12 session JWT).  
 Audience: Flutter / mobile developers integrating with NexoVending.  
 Source of truth: `src/nexo_vending/api/` (OpenAPI also at `/docs` when the server runs).
 
-Related docs: [API_ARCHITECTURE.md](../architecture/API_ARCHITECTURE.md), [REPLENISHMENT_EXECUTION_CONTEXT.md](../architecture/REPLENISHMENT_EXECUTION_CONTEXT.md), [ERRORS.md](ERRORS.md), [IDEMPOTENCY.md](IDEMPOTENCY.md).
+Related docs: [MOBILE_AUTHENTICATION_CONTRACT.md](MOBILE_AUTHENTICATION_CONTRACT.md), [API_ARCHITECTURE.md](../architecture/API_ARCHITECTURE.md), [REPLENISHMENT_EXECUTION_CONTEXT.md](../architecture/REPLENISHMENT_EXECUTION_CONTEXT.md), [ERRORS.md](ERRORS.md), [IDEMPOTENCY.md](IDEMPOTENCY.md).
 
 ---
 
@@ -49,35 +49,50 @@ Versioning policy: [VERSIONING.md](../VERSIONING.md), [ADR-031](../adr/ADR-031-h
 
 ## 3. Authentication and context (every business call)
 
-Health endpoints need **no** auth. All other endpoints require:
+**Full auth ownership and monolito-fachada:** see [MOBILE_AUTHENTICATION_CONTRACT.md](MOBILE_AUTHENTICATION_CONTRACT.md) and [ADR-033](../adr/ADR-033-monolith-session-facade.md).
+
+Flutter uses **one** Vending host. Session JWT is issued by Platform (`nexo-platform==1.11.0`) via `POST /api/v1/auth/session`. Vending does not implement OAuth/JWT crypto in domain.
+
+Health endpoints need **no** auth. `POST /auth/session` uses `id_token` in the body (no Bearer). All other `/api/v1` endpoints require:
 
 | Header | Required | Format / meaning |
 | --- | --- | --- |
-| `Authorization` | **Yes** | `Bearer principal/<provider>/<subject>` |
-| `X-Tenant-Id` | **Yes** | Trusted tenant id (from gateway / session), **never** from free-form user input as authority |
-| `X-Request-Id` | No | Correlation id; echoed in error `request_id` when present |
-| `Idempotency-Key` | Recommended on **POST** | Opaque string; same key + same payload → same result |
+| `Authorization` | **Yes** | `Bearer <session JWT>` **or** harness `Bearer principal/<provider>/<subject>` |
+| `X-Tenant-Id` | Harness: **Yes**. Session JWT: optional (must match claim) | Tenant authority for harness; consistency check for JWT |
+| `X-Request-Id` | No | Correlation id |
+| `Idempotency-Key` | Recommended on **POST** | Opaque string |
 
-### Example
+### Session issue (no prior Bearer)
+
+```http
+POST /api/v1/auth/session
+Content-Type: application/json
+
+{ "id_token": "<google_id_token>", "tenant_id": "tenant-acme" }
+```
+
+```json
+{ "access_token": "<jwt>", "token_type": "Bearer", "expires_in": 3600 }
+```
+
+### Example (dev / trusted harness)
 
 ```http
 Authorization: Bearer principal/google/118234567890
 X-Tenant-Id: tenant-acme
-X-Request-Id: 01JMOBILE-REQ-001
-Idempotency-Key: 01JMOBILE-CREATE-R1
 ```
 
 ### Auth semantics
 
-1. The bearer token is a **trusted principal** already authenticated by a gateway (or test harness). Vending does **not** implement OAuth/JWT login for mobile in this version.
-2. Vending resolves `Principal` + `X-Tenant-Id` → `Operator` for that tenant.
-3. If the operator is missing / wrong tenant / inactive for the action → **403**.
-4. Missing credentials or tenant → **401** with FastAPI shape `{"detail":"..."}` (not the domain error envelope).
+1. Session JWT: `JwtService.decode_session` → `session.tenant_id` is authority.
+2. Harness principal token: requires `X-Tenant-Id`.
+3. Vending resolves `Principal` + tenant → `Operator`.
+4. Missing/invalid credentials → **401**. Operator/policy failure → **403**.
 
-### Never send as authority in JSON body
+### Never send as authority in JSON body (business routes)
 
 - `tenant_id`
-- `operator_id` / `actor_id` (server uses the authenticated operator)
+- `operator_id` / `actor_id`
 
 ---
 
@@ -91,6 +106,13 @@ Full business URLs = `/api/v1` + path below (e.g. `POST /api/v1/replenishments`)
 | --- | --- | ---: | --- |
 | GET | `/health` | 200 | `status`, `package_version`, `api_version` |
 | GET | `/health/ready` | 200 | same + readiness — or **503** if DB unavailable |
+
+### 4.1b Auth / operator bootstrap (V12)
+
+| Method | Path | Auth | Success |
+| --- | --- | --- | ---: |
+| POST | `/auth/session` | `id_token` in body (no Bearer) | 200 |
+| GET | `/operators/me` | Bearer session JWT or harness | 200 |
 
 ### 4.2 Machines (replenisher)
 
@@ -535,7 +557,9 @@ Admin inventory permissions (`inventory.*` + `vending.inventory`) are separate.
 | Capability | Status |
 | --- | --- |
 | Flutter / offline SQLite sync | Not in Vending API |
-| OAuth / Google Sign-In inside Vending | Gateway responsibility |
+| OAuth / Google Sign-In / JWT crypto inside Vending domain | **Forbidden** — Platform library; see [MOBILE_AUTHENTICATION_CONTRACT.md](MOBILE_AUTHENTICATION_CONTRACT.md) |
+| `POST /api/v1/auth/session` (thin facade → Platform) | **Implemented** (V12) |
+| Session JWT with `tenant_id` claim (`nexo-platform==1.11.0`) | **Implemented** |
 | Product catalog CRUD | Application only (no HTTP) |
 | Create/update machines & slots | Application only |
 | Assign machine ↔ replenisher | Application only (admin provisioning) |
@@ -548,6 +572,7 @@ Admin inventory permissions (`inventory.*` + `vending.inventory`) are separate.
 
 ## 12. Mobile implementation checklist
 
+- [ ] Use one Vending base URL; obtain session via `POST /api/v1/auth/session` (see [MOBILE_AUTHENTICATION_CONTRACT.md](MOBILE_AUTHENTICATION_CONTRACT.md)); harness `principal/...` only for tests  
 - [ ] Send `Authorization` + `X-Tenant-Id` on every business call  
 - [ ] Never put `tenant_id` in JSON as authority  
 - [ ] Resolve machine before creating replenishment  

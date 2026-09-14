@@ -18,6 +18,20 @@ class Settings(BaseSettings):
     api_prefix: str = API_PREFIX
     log_level: str = "INFO"
 
+    # Session JWT (Platform JwtService) — prefer RS256 in production.
+    jwt_algorithm: str = "HS256"
+    jwt_issuer: str = "nexo"
+    jwt_secret: str | None = "dev-only-change-me"
+    jwt_private_key: str | None = None
+    jwt_public_key: str | None = None
+    jwt_key_id: str | None = None
+    jwt_expires_in: int = 3600
+
+    # Google OIDC (composition-root only; wires Platform GoogleOAuthProvider).
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    google_redirect_uri: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

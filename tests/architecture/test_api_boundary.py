@@ -49,6 +49,8 @@ def test_api_platform_imports_are_public_only() -> None:
     violations: list[str] = []
     for path in python_files(API_ROOT):
         for module in imported_names(path):
-            if module.startswith("nexo_platform") and not is_allowed_platform_import(module):
+            if module.startswith("nexo_platform") and not is_allowed_platform_import(
+                module, path=path
+            ):
                 violations.append(f"{path} imports {module}")
     assert not violations, "\n".join(violations)

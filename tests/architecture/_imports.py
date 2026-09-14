@@ -20,7 +20,7 @@ FORBIDDEN_COPIED_PATHS = (
     ROOT / "modules" / "identity",
 )
 
-# Public Platform surface allowed in Vending source (nexo-platform 1.10.0+).
+# Public Platform surface allowed in Vending source (nexo-platform 1.11.0+).
 ALLOWED_PLATFORM_PREFIXES = (
     "nexo_platform",
     "nexo_platform.authorization",
@@ -40,6 +40,11 @@ ALLOWED_PLATFORM_PREFIXES = (
     "nexo_platform.transaction",
     "nexo_platform.usage",
 )
+
+# Sole composition-root module allowed to import GoogleOAuthProvider (INTERNAL).
+COMPOSITION_ROOT_AUTH_PROVIDERS = (
+    SRC_ROOT / "api" / "dependencies" / "auth_providers.py"
+).resolve()
 
 FORBIDDEN_PLATFORM_PREFIXES = (
     "nexo_platform.infrastructure",
@@ -79,6 +84,7 @@ DOMAIN_ALLOWED_PLATFORM_IN_IDENTITY = (
 
 APPLICATION_FORBIDDEN = (
     "nexo_vending.infrastructure",
+    "nexo_platform.identity.infrastructure",
     "google.oauth2",
     "google.auth",
     "authlib",
@@ -113,10 +119,19 @@ def starts_with_any(module: str, prefixes: Iterable[str]) -> bool:
     return False
 
 
-def is_allowed_platform_import(module: str) -> bool:
+def is_allowed_platform_import(module: str, *, path: Path | None = None) -> bool:
     if not module.startswith("nexo_platform"):
         return True
     if starts_with_any(module, FORBIDDEN_PLATFORM_PREFIXES):
+        if (
+            path is not None
+            and path.resolve() == COMPOSITION_ROOT_AUTH_PROVIDERS
+            and starts_with_any(
+                module,
+                ("nexo_platform.identity.infrastructure.oauth.google",),
+            )
+        ):
+            return True
         return False
     if module == "nexo_platform":
         return True

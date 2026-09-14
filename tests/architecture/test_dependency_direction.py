@@ -47,6 +47,6 @@ def test_vending_source_does_not_use_platform_internals() -> None:
     violations: list[str] = []
     for file in python_files(SRC_ROOT):
         for module in imported_names(file):
-            if not is_allowed_platform_import(module):
+            if not is_allowed_platform_import(module, path=file):
                 violations.append(f"{file} imports forbidden {module}")
     assert not violations, "\n".join(violations)

@@ -8,9 +8,12 @@ from hashlib import sha256
 from typing import Any
 
 from nexo_platform.idempotency import IdempotencyKey, IdempotencyService
+from nexo_platform.identity import AuthenticationProvider, JwtService
 from nexo_platform.tenant import RequestContext
 from sqlalchemy.orm import Session
 
+from nexo_vending.application.identity.get_current_operator import GetCurrentOperator
+from nexo_vending.application.identity.issue_session import IssueOperatorSession
 from nexo_vending.application.inventory.assign import (
     AdjustInventory,
     AssignInventory,
@@ -125,6 +128,21 @@ class UseCaseFactory:
             self.persistence.machines,
             self.persistence.assignments,
         )
+
+    def issue_operator_session(
+        self,
+        *,
+        authentication: AuthenticationProvider,
+        jwt_service: JwtService,
+    ) -> IssueOperatorSession:
+        return IssueOperatorSession(
+            authentication=authentication,
+            jwt_service=jwt_service,
+            operators=self.persistence.operators,
+        )
+
+    def get_current_operator(self) -> GetCurrentOperator:
+        return GetCurrentOperator(self.persistence.operators)
 
 
 def request_hash_for(payload: bytes | str) -> str:

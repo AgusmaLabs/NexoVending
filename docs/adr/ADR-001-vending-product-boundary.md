@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-07
-- Updated: 2026-09-11 (consume `nexo-platform==1.10.0`)
+- Updated: 2026-09-14 (consume `nexo-platform==1.11.0`)
 
 ## Context
 

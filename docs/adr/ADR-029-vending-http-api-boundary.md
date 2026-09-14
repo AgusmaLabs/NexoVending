@@ -28,11 +28,11 @@ Rules:
 5. Mutating endpoints use Platform `IdempotencyService` when `Idempotency-Key` is present (same Session/UoW).
 6. Observability uses Platform `Observability` contracts only.
 
-Authentication in V9 accepts a trusted gateway principal token:
+Authentication in V9 accepted a trusted gateway principal token:
 
 `Authorization: Bearer principal/<provider>/<subject>`
 
-Production IdP/JWT validation remains a future adapter swap; Vending does not implement OAuth/JWT.
+As of V12 (`nexo-platform==1.11.0`), business routes also accept Platform session JWTs from `JwtService.decode_session` (issued via `POST /api/v1/auth/session`). See [ADR-033](ADR-033-monolith-session-facade.md). Vending still does not implement OAuth/JWT crypto.
 
 ## Consequences
 

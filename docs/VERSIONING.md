@@ -82,7 +82,7 @@ python scripts/export_openapi.py --out docs/api/openapi-v1.json
 
 ## 5. Compatibility with NexoPlatform
 
-`nexo-vending` pins `nexo-platform==1.10.0`. Bumping Platform is a **package** dependency change and may ship without bumping HTTP `v1` if the public HTTP contract is unchanged.
+`nexo-vending` pins `nexo-platform==1.11.0`. Bumping Platform is a **package** dependency change and may ship without bumping HTTP `v1` if the public HTTP contract is unchanged.
 
 ## 6. Related docs
 

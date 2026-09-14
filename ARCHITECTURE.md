@@ -21,7 +21,7 @@ Forbidden in **domain**: any `nexo_platform` import (except identity `Principal`
 
 ## What belongs where
 
-### Platform (dependency) — `nexo-platform==1.10.0`
+### Platform (dependency) — `nexo-platform==1.11.0`
 
 - Tenant / `RequestContext` / `TenantContext`
 - Public persistence: `Database`, `SessionFactory`
@@ -97,7 +97,7 @@ RequestContext
 
 | Capability | Status |
 | --- | --- |
-| Package bootstrap + Platform dependency | Implemented (`nexo-platform==1.10.0`) |
+| Package bootstrap + Platform dependency | Implemented (`nexo-platform==1.11.0`) |
 | Health / readiness | Implemented |
 | Domain foundation + replenishment aggregate | Implemented |
 | Inventory ledger model | Implemented |
@@ -106,7 +106,7 @@ RequestContext
 | Machine & physical slot configuration | Implemented |
 | Inventory custody ledger + machine periods + sales consumption | Implemented |
 | Repository / domain service Protocols | Implemented |
-| Platform integration review | Implemented (V7; aligned to 1.10.0) |
+| Platform integration review | Implemented (V7; aligned to 1.11.0) |
 | Platform `TransactionalUnitOfWork` + public `Database` | Implemented (consumed; composition helpers) |
 | PostgreSQL domain persistence (ORM/repos/migrations) | Implemented (V8) |
 | Business HTTP API (replenishment + inventory) | Implemented (V9) |

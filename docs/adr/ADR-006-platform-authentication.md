@@ -9,7 +9,7 @@ Vending needs authenticated operators (initially via Google) without owning OAut
 
 ## Decision
 
-All transversal authentication belongs to `nexo-platform` (current pin: `1.10.0`).
+All transversal authentication belongs to `nexo-platform` (current pin: `1.11.0`).
 
 Vending consumes:
 

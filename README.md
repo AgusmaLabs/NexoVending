@@ -7,7 +7,7 @@ Producto de negocio para operar máquinas vending. Consume **nexo-platform** com
 ```text
 nexo-vending
       │
-      ├──────────────→ nexo-platform   (pip: nexo-platform==1.10.0)
+      ├──────────────→ nexo-platform   (pip: nexo-platform==1.11.0)
       │
       └──────────────→ PostgreSQL      (schema propio de Vending)
 ```
@@ -34,7 +34,7 @@ NexoPlatform **no** depende de NexoVending.
 
 - Python 3.12+
 - Docker (para Compose / Testcontainers)
-- Acceso al repositorio/wheel de `nexo-platform==1.10.0` (aún no publicado en PyPI público)
+- Acceso al repositorio/wheel de `nexo-platform==1.11.0` (aún no publicado en PyPI público)
 
 ## Instalación (desarrollo)
 
